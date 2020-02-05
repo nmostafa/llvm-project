@@ -93,3 +93,20 @@ func @std_parallel_loop(%arg0 : index, %arg1 : index, %arg2 : index,
 //  CHECK-NEXT:       "loop.terminator"() : () -> ()
 //  CHECK-NEXT:     } : f32
 //  CHECK-NEXT:     "loop.terminator"() : () -> ()
+
+
+func @std_if_yield(%arg0: i1, %arg1: f32)
+{
+  %x, %y = loop.if %arg0 {
+    %0 = addf %arg1, %arg1 : f32
+    %1 = subf %arg1, %arg1 : f32
+    loop.yield %0, %1 : f32, f32
+  } else {
+    %0 = subf %arg1, %arg1 : f32
+    %1 = addf %arg1, %arg1 : f32
+    loop.yield %0, %1 : f32, f32
+  } : f32, f32
+  return
+}
+
+// TODO: Add CHECKS

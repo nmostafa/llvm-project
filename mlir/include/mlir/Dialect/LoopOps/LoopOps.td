@@ -61,7 +61,8 @@ def ForOp : Loop_Op<"for",
        }
     ```
   }];
-  let arguments = (ins Index:$lowerBound, Index:$upperBound, Index:$step);
+  let results = (outs Variadic<AnyType>:$results);
+  let arguments = (ins Index:$lowerBound, Index:$upperBound, Index:$step, Variadic<AnyType>:$initArgs);
   let regions = (region SizedRegion<1>:$region);
 
   let skipDefaultBuilders = 1;
@@ -79,6 +80,7 @@ def ForOp : Loop_Op<"for",
     void setLowerBound(Value bound) { getOperation()->setOperand(0, bound); }
     void setUpperBound(Value bound) { getOperation()->setOperand(1, bound); }
     void setStep(Value step) { getOperation()->setOperand(2, step); }
+    // TODO Add helpers here
   }];
 }
 
@@ -107,6 +109,7 @@ def IfOp : Loop_Op<"if",
        }
     ```
   }];
+  let results = (outs Variadic<AnyType>:$results);
   let arguments = (ins I1:$condition);
   let regions = (region SizedRegion<1>:$thenRegion, AnyRegion:$elseRegion);
 
@@ -249,6 +252,16 @@ def ReduceReturnOp :
   }];
 
   let arguments = (ins AnyType:$result);
+}
+
+def YieldOp : Loop_Op<"yield"> {
+  let summary = "cf yield operation";
+  let description = [{
+    "loop.yield" yields a value from a loop op region. If present, it should
+    be the last operation before "loop.terminator".
+  }];
+
+  let arguments = (ins Variadic<AnyType>:$results);
 }
 
 def TerminatorOp : Loop_Op<"terminator", [Terminator]> {

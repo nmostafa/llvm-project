@@ -4325,6 +4325,22 @@ public:
     return parser.parseTypeListNoParens(result);
   }
 
+  /// Parse an assignment list of the form
+  /// %a = %b : type1, ... 
+  ParseResult
+  parseAssignmentList(SmallVectorImpl<OperandType> &lhs, SmallVectorImpl<OperandType> &rhs, SmallVectorImpl<Type> &types) {
+    auto parseElt = [&]() -> ParseResult {
+      OperandType regionArg, operand;
+      Type type;
+      if (parseRegionArgument(regionArg) || parseEqual() || parseOperand(operand) || parseColon() || parseType(type))
+        return failure();
+      lhs.push_back(regionArg);
+      types.push_back(type);
+      rhs.push_back(operand);
+      return success();
+    };
+    return parser.parseCommaSeparatedListUntil(Token::r_brace, parseElt);
+  }
 private:
   /// The source location of the operation name.
   SMLoc nameLoc;
