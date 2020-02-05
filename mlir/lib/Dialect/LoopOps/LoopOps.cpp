@@ -76,9 +76,10 @@ static LogicalResult verify(ForOp op) {
   // Check that the body defines as single block argument for the induction
   // variable.
   auto *body = op.getBody();
-  if (body->getNumArguments() != 1 || !body->getArgument(0).getType().isIndex())
-    return op.emitOpError("expected body to have a single index argument for "
-                          "the induction variable");
+  if (!body->getArgument(0).getType().isIndex())
+    return op.emitOpError(
+        "expected body first argument to be an index argument for "
+        "the induction variable");
   return success();
 }
 
@@ -86,7 +87,19 @@ static void print(OpAsmPrinter &p, ForOp op) {
   p << op.getOperationName() << " " << op.getInductionVar() << " = "
     << op.lowerBound() << " to " << op.upperBound() << " step " << op.step();
 
-  // TODO enable print of init args
+  if (op.hasIterArgs()) {
+    p << " iter_args(";
+    auto regionArgs = op.getRegionIterArgs();
+    auto operands = op.getIterOperands();
+    for (auto e : llvm::zip(regionArgs, operands)) {
+      auto operand = std::get<1>(e);
+      p << std::get<0>(e) << " = " << std::get<1>(e) << " : ";
+      p << operand.getType();
+    }
+    p << ")";
+  }
+  if (!op.results().empty())
+    p << " -> (" << op.getResultTypes() << ")";
   p.printRegion(op.region(),
                 /*printEntryBlockArgs=*/false,
                 /*printBlockTerminators=*/false);
@@ -114,19 +127,18 @@ static ParseResult parseForOp(OpAsmParser &parser, OperationState &result) {
   SmallVector<OpAsmParser::OperandType, 4> regionArgs, operands;
   SmallVector<Type, 4> argTypes;
   regionArgs.push_back(inductionVariable);
-  argTypes.push_back(indexType);
-  if (!parser.parseOptionalKeyword("iter_args")) {
-    if (parser.parseLParen())
-      return failure();
 
+  if (!parser.parseOptionalKeyword("iter_args")) {
     parser.parseAssignmentList(regionArgs, operands, argTypes);
+    // resolve input operands
     for (auto operand_type : llvm::zip(operands, argTypes))
       parser.resolveOperand(std::get<0>(operand_type),std::get<1>(operand_type), result.operands);
-
-    if (parser.parseRParen())
-      return failure();
   }
+  argTypes.insert(argTypes.begin(), indexType);
 
+  // Parse optional results type list
+  if (parser.parseOptionalArrowTypeList(result.types))
+    return failure();
   // Parse the body region.
   Region *body = result.addRegion();
   if (parser.parseRegion(*body, regionArgs, argTypes))
@@ -136,10 +148,6 @@ static ParseResult parseForOp(OpAsmParser &parser, OperationState &result) {
 
   // Parse the optional attribute list.
   if (parser.parseOptionalAttrDict(result.attributes))
-    return failure();
-
-  // Parse optional results type list
-  if (parser.parseOptionalColonTypeList(result.types))
     return failure();
 
   return success();
@@ -206,7 +214,9 @@ static ParseResult parseIfOp(OpAsmParser &parser, OperationState &result) {
   if (parser.parseOperand(cond) ||
       parser.resolveOperand(cond, i1Type, result.operands))
     return failure();
-
+  // Parse optional results type list
+  if (parser.parseOptionalArrowTypeList(result.types))
+    return failure();
   // Parse the 'then' region.
   if (parser.parseRegion(*thenRegion, /*arguments=*/{}, /*argTypes=*/{}))
     return failure();
@@ -222,15 +232,13 @@ static ParseResult parseIfOp(OpAsmParser &parser, OperationState &result) {
   // Parse the optional attribute list.
   if (parser.parseOptionalAttrDict(result.attributes))
     return failure();
-
-  // Parse optional results type list
-  if (parser.parseOptionalColonTypeList(result.types))
-    return failure();
   return success();
 }
 
 static void print(OpAsmPrinter &p, IfOp op) {
   p << IfOp::getOperationName() << " " << op.condition();
+  if (!op.results().empty())
+    p << " -> (" << op.getResultTypes() << ")";
   p.printRegion(op.thenRegion(),
                 /*printEntryBlockArgs=*/false,
                 /*printBlockTerminators=*/false);
@@ -245,8 +253,6 @@ static void print(OpAsmPrinter &p, IfOp op) {
   }
 
   p.printOptionalAttrDict(op.getAttrs());
-  if (!op.results().empty())
-    p << " : " << op.getResultTypes();
 }
 
 //===----------------------------------------------------------------------===//
@@ -466,7 +472,23 @@ static void print(OpAsmPrinter &p, ReduceReturnOp op) {
 // YieldOp
 //===----------------------------------------------------------------------===//
 
-static LogicalResult verify(YieldOp op) { /* TODO */ return success(); }
+static LogicalResult verify(YieldOp op) {
+  auto parentOp = op.getParentOp();
+  auto results = parentOp->getResults();
+  auto operands = op.getOperands();
+
+  if (!isa<IfOp>(parentOp) && !isa<ForOp>(parentOp))
+    return op.emitError() << "yield must be within IfOp or ForOp regions";
+  if (parentOp->getNumResults() != op.getNumOperands())
+    return op.emitOpError() << "parent of yield must have same number of "
+                               "results as the yield operands";
+
+  for (auto e : llvm::zip(results, operands)) {
+    if (std::get<0>(e).getType() != std::get<1>(e).getType())
+      op.emitOpError() << "types mismatch between yield op and its parent";
+  }
+  return success();
+}
 
 static ParseResult parseYieldOp(OpAsmParser &parser, OperationState &result) {
   SmallVector<OpAsmParser::OperandType, 4> operands;

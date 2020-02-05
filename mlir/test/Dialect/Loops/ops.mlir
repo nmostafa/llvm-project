@@ -97,7 +97,7 @@ func @std_parallel_loop(%arg0 : index, %arg1 : index, %arg2 : index,
 
 func @std_if_yield(%arg0: i1, %arg1: f32)
 {
-  %x, %y = loop.if %arg0 {
+  %x, %y = loop.if %arg0 -> (f32, f32) {
     %0 = addf %arg1, %arg1 : f32
     %1 = subf %arg1, %arg1 : f32
     loop.yield %0, %1 : f32, f32
@@ -105,7 +105,16 @@ func @std_if_yield(%arg0: i1, %arg1: f32)
     %0 = subf %arg1, %arg1 : f32
     %1 = addf %arg1, %arg1 : f32
     loop.yield %0, %1 : f32, f32
-  } : f32, f32
+  }
+  return
+}
+
+func @std_for_yield(%arg0 : index, %arg1 : index, %arg2 : index) {
+  %s0 = constant 0.0 : f32
+  %result = loop.for %i0 = %arg0 to %arg1 step %arg2 iter_args(%si = %s0 : f32) -> (f32) {
+    %sn = addf %si, %si : f32
+    loop.yield %sn : f32
+  }
   return
 }
 

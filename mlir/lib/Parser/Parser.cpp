@@ -4326,7 +4326,8 @@ public:
   }
 
   /// Parse an assignment list of the form
-  /// %a = %b : type1, ... 
+  /// (%a = %b : type1, ... )
+  /// The list must contain at least one entry
   ParseResult
   parseAssignmentList(SmallVectorImpl<OperandType> &lhs, SmallVectorImpl<OperandType> &rhs, SmallVectorImpl<Type> &types) {
     auto parseElt = [&]() -> ParseResult {
@@ -4339,7 +4340,9 @@ public:
       rhs.push_back(operand);
       return success();
     };
-    return parser.parseCommaSeparatedListUntil(Token::r_brace, parseElt);
+    if (parseLParen())
+      return failure();
+    return parser.parseCommaSeparatedListUntil(Token::r_paren, parseElt);
   }
 private:
   /// The source location of the operation name.

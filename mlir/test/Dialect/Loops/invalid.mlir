@@ -63,7 +63,7 @@ func @loop_for_single_block(%arg0: index) {
 // -----
 
 func @loop_for_single_index_argument(%arg0: index) {
-  // expected-error@+1 {{expected body to have a single index argument for the induction variable}}
+  // expected-error@+1 {{op expected body first argument to be an index argument for the induction variable}}
   "loop.for"(%arg0, %arg0, %arg0) (
     {
     ^bb0(%i0 : f32):

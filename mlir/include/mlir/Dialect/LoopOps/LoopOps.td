@@ -77,10 +77,22 @@ def ForOp : Loop_Op<"for",
     OpBuilder getBodyBuilder() {
       return OpBuilder(getBody(), std::prev(getBody()->end()));
     }
+    iterator_range<Block::args_iterator> getRegionIterArgs() {
+      auto iterArgsBegin = getBody()->args_begin();
+      std::advance(iterArgsBegin, 1);
+      return {iterArgsBegin, getBody()->args_end()};
+    }
+    iterator_range<Operation::operand_iterator> getIterOperands() {
+      auto operands = getOperation()->getOperands();
+      auto iterOpndBegin = operands.begin();
+      std::advance(iterOpndBegin, 3);
+      return {iterOpndBegin, operands.end()};
+    }
+
     void setLowerBound(Value bound) { getOperation()->setOperand(0, bound); }
     void setUpperBound(Value bound) { getOperation()->setOperand(1, bound); }
     void setStep(Value step) { getOperation()->setOperand(2, step); }
-    // TODO Add helpers here
+    bool hasIterArgs() { return getOperation()->getNumOperands() > 3; }
   }];
 }
 
