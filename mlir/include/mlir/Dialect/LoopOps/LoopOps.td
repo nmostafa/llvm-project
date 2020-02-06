@@ -138,7 +138,7 @@ def ForOp : Loop_Op<"for",
     iterator_range<Operation::operand_iterator> getIterOperands() {
       auto operands = getOperation()->getOperands();
       auto iterOpndBegin = operands.begin();
-      std::advance(iterOpndBegin, 3);
+      std::advance(iterOpndBegin, getNumCtrlOperands());
       return {iterOpndBegin, operands.end()};
     }
 
