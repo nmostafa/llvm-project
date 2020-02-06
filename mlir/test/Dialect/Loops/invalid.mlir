@@ -29,7 +29,7 @@ func @loop_for_step_positive(%arg0: index) {
   %c0 = constant 0 : index
   "loop.for"(%arg0, %arg0, %c0) ({
     ^bb0(%arg1: index):
-      "loop.terminator"() : () -> ()
+      "loop.yield"() : () -> ()
   }) : (index, index, index) -> ()
   return
 }
@@ -39,8 +39,8 @@ func @loop_for_step_positive(%arg0: index) {
 func @loop_for_one_region(%arg0: index) {
   // expected-error@+1 {{incorrect number of regions: expected 1 but found 2}}
   "loop.for"(%arg0, %arg0, %arg0) (
-    {"loop.terminator"() : () -> ()},
-    {"loop.terminator"() : () -> ()}
+    {"loop.yield"() : () -> ()},
+    {"loop.yield"() : () -> ()}
   ) : (index, index, index) -> ()
   return
 }
@@ -52,9 +52,9 @@ func @loop_for_single_block(%arg0: index) {
   "loop.for"(%arg0, %arg0, %arg0) (
     {
     ^bb1:
-      "loop.terminator"() : () -> ()
+      "loop.yield"() : () -> ()
     ^bb2:
-      "loop.terminator"() : () -> ()
+      "loop.yield"() : () -> ()
     }
   ) : (index, index, index) -> ()
   return
@@ -67,7 +67,7 @@ func @loop_for_single_index_argument(%arg0: index) {
   "loop.for"(%arg0, %arg0, %arg0) (
     {
     ^bb0(%i0 : f32):
-      "loop.terminator"() : () -> ()
+      "loop.yield"() : () -> ()
     }
   ) : (index, index, index) -> ()
   return
@@ -95,9 +95,9 @@ func @loop_if_not_one_block_per_region(%arg0: i1) {
   // expected-error@+1 {{expects region #0 to have 0 or 1 blocks}}
   "loop.if"(%arg0) ({
     ^bb0:
-      "loop.terminator"() : () -> ()
+      "loop.yield"() : () -> ()
     ^bb1:
-      "loop.terminator"() : () -> ()
+      "loop.yield"() : () -> ()
   }, {}): (i1) -> ()
   return
 }
@@ -108,7 +108,7 @@ func @loop_if_illegal_block_argument(%arg0: i1) {
   // expected-error@+1 {{requires that child entry blocks have no arguments}}
   "loop.if"(%arg0) ({
     ^bb0(%0 : index):
-      "loop.terminator"() : () -> ()
+      "loop.yield"() : () -> ()
   }, {}): (i1) -> ()
   return
 }
@@ -130,7 +130,7 @@ func @parallel_body_arguments_wrong_type(
   // expected-error@+1 {{'loop.parallel' op expects arguments for the induction variable to be of index type}}
   "loop.parallel"(%arg0, %arg1, %arg2) ({
     ^bb0(%i0: f32):
-      "loop.terminator"() : () -> ()
+      "loop.yield"() : () -> ()
   }): (index, index, index) -> ()
   return
 }
@@ -142,7 +142,7 @@ func @parallel_body_wrong_number_of_arguments(
   // expected-error@+1 {{'loop.parallel' op expects the same number of induction variables as bound and step values}}
   "loop.parallel"(%arg0, %arg1, %arg2) ({
     ^bb0(%i0: index, %i1: index):
-      "loop.terminator"() : () -> ()
+      "loop.yield"() : () -> ()
   }): (index, index, index) -> ()
   return
 }
@@ -265,7 +265,7 @@ func @reduce_wrong_terminator(%arg0 : index, %arg1 : f32) {
     // expected-error@+1 {{the block inside reduce should be terminated with a 'loop.reduce.return' op}}
     loop.reduce(%arg1) {
       ^bb0(%lhs : f32, %rhs : f32):
-        "loop.terminator"(): () -> ()
+        "loop.yield"(): () -> ()
     } : f32
   } : f32
   return

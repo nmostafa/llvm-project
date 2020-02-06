@@ -37,7 +37,7 @@ class Loop_Op<string mnemonic, list<OpTrait> traits = []> :
 
 def ForOp : Loop_Op<"for",
       [DeclareOpInterfaceMethods<LoopLikeOpInterface>,
-       SingleBlockImplicitTerminator<"TerminatorOp">]> {
+       SingleBlockImplicitTerminator<"YieldOp">]> {
   let summary = "for operation";
   let description = [{
     The "loop.for" operation represents a loop nest taking 3 SSA value as
@@ -97,7 +97,7 @@ def ForOp : Loop_Op<"for",
 }
 
 def IfOp : Loop_Op<"if",
-      [SingleBlockImplicitTerminator<"TerminatorOp">]> {
+      [SingleBlockImplicitTerminator<"YieldOp">]> {
   let summary = "if-then-else operation";
   let description = [{
     The "loop.if" operation represents an if-then-else construct for
@@ -146,7 +146,7 @@ def IfOp : Loop_Op<"if",
 }
 
 def ParallelOp : Loop_Op<"parallel",
-    [SameVariadicOperandSize, SingleBlockImplicitTerminator<"TerminatorOp">]> {
+    [SameVariadicOperandSize, SingleBlockImplicitTerminator<"YieldOp">]> {
   let summary = "parallel for operation";
   let description = [{
     The "loop.parallel" operation represents a loop nest taking 3 groups of SSA
@@ -266,35 +266,42 @@ def ReduceReturnOp :
   let arguments = (ins AnyType:$result);
 }
 
-def YieldOp : Loop_Op<"yield"> {
-  let summary = "cf yield operation";
+def YieldOp : Loop_Op<"yield", [Terminator]> {
+  let summary = "cf yield and termination operation";
   let description = [{
-    "loop.yield" yields a value from a loop op region. If present, it should
-    be the last operation before "loop.terminator".
+    "loop.yield" yields a value from a loop op region 
+    and terminates the regions.
   }];
 
   let arguments = (ins Variadic<AnyType>:$results);
-}
-
-def TerminatorOp : Loop_Op<"terminator", [Terminator]> {
-  let summary = "cf terminator operation";
-  let description = [{
-    "loop.terminator" is a special terminator operation for blocks inside
-    loops. It terminates the region. This operation does _not_ have a custom
-    syntax. However, `std` control operations omit the terminator in their
-    custom syntax for brevity.
-
-    ```mlir
-       loop.terminator
-    ```
-  }];
-
-  // No custom parsing/printing form.
-  let parser = ?;
+  let builders = [
+    OpBuilder<"Builder *builder, OperationState &result">
+  ];
   let printer = ?;
-
-  // Fully specified by traits.
-  let verifier = ?;
 }
+
+
+
+//def TerminatorOp : Loop_Op<"terminator", [Terminator]> {
+//  let summary = "cf terminator operation";
+//  let description = [{
+//    "loop.terminator" is a special terminator operation for blocks inside
+//    loops. It terminates the region. This operation does _not_ have a custom
+//    syntax. However, `std` control operations omit the terminator in their
+//    custom syntax for brevity.
+//
+//    ```mlir
+//       loop.terminator
+//    ```
+//  }];
+//
+//  // No custom parsing/printing form.
+//  let parser = ?;
+//  let printer = ?;
+//
+//  // Fully specified by traits.
+//  let verifier = ?;
+//}
+
 
 #endif // LOOP_OPS

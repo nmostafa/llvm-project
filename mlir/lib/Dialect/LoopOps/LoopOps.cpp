@@ -84,6 +84,7 @@ static LogicalResult verify(ForOp op) {
 }
 
 static void print(OpAsmPrinter &p, ForOp op) {
+  bool printBlockTerminators = false;
   p << op.getOperationName() << " " << op.getInductionVar() << " = "
     << op.lowerBound() << " to " << op.upperBound() << " step " << op.step();
 
@@ -98,11 +99,13 @@ static void print(OpAsmPrinter &p, ForOp op) {
     }
     p << ")";
   }
-  if (!op.results().empty())
+  if (!op.results().empty()) {
     p << " -> (" << op.getResultTypes() << ")";
+    printBlockTerminators = true;
+  }
   p.printRegion(op.region(),
                 /*printEntryBlockArgs=*/false,
-                /*printBlockTerminators=*/false);
+                /*printBlockTerminators=*/printBlockTerminators);
   p.printOptionalAttrDict(op.getAttrs());
 }
 
@@ -199,6 +202,10 @@ static LogicalResult verify(IfOp op) {
         return op.emitOpError(
             "requires that child entry blocks have no arguments");
   }
+  // TODO:
+  // IfOp returns a value -> Else region is not empty
+  // Yield Op is present at end of each region
+
   return success();
 }
 
@@ -236,12 +243,17 @@ static ParseResult parseIfOp(OpAsmParser &parser, OperationState &result) {
 }
 
 static void print(OpAsmPrinter &p, IfOp op) {
+  bool printBlockTerminators = false;
+
   p << IfOp::getOperationName() << " " << op.condition();
-  if (!op.results().empty())
+  if (!op.results().empty()) {
     p << " -> (" << op.getResultTypes() << ")";
+    // print yield explicitly if the op defines values
+    printBlockTerminators = true;
+  }
   p.printRegion(op.thenRegion(),
                 /*printEntryBlockArgs=*/false,
-                /*printBlockTerminators=*/false);
+                /*printBlockTerminators=*/printBlockTerminators);
 
   // Print the 'else' regions if it exists and has a block.
   auto &elseRegion = op.elseRegion();
@@ -249,7 +261,7 @@ static void print(OpAsmPrinter &p, IfOp op) {
     p << " else";
     p.printRegion(elseRegion,
                   /*printEntryBlockArgs=*/false,
-                  /*printBlockTerminators=*/false);
+                  /*printBlockTerminators=*/printBlockTerminators);
   }
 
   p.printOptionalAttrDict(op.getAttrs());
@@ -471,22 +483,27 @@ static void print(OpAsmPrinter &p, ReduceReturnOp op) {
 //===----------------------------------------------------------------------===//
 // YieldOp
 //===----------------------------------------------------------------------===//
+void YieldOp::build(Builder *builder, OperationState &result) {}
 
 static LogicalResult verify(YieldOp op) {
   auto parentOp = op.getParentOp();
   auto results = parentOp->getResults();
   auto operands = op.getOperands();
 
-  if (!isa<IfOp>(parentOp) && !isa<ForOp>(parentOp))
-    return op.emitError() << "yield must be within IfOp or ForOp regions";
-  if (parentOp->getNumResults() != op.getNumOperands())
-    return op.emitOpError() << "parent of yield must have same number of "
-                               "results as the yield operands";
+  if (!isa<IfOp>(parentOp) && !isa<ForOp>(parentOp) &&
+      !isa<ParallelOp>(parentOp))
+    return op.emitError() << "yield terminate If, For or Parallel regions";
 
-  for (auto e : llvm::zip(results, operands)) {
-    if (std::get<0>(e).getType() != std::get<1>(e).getType())
-      op.emitOpError() << "types mismatch between yield op and its parent";
+  if (isa<IfOp>(parentOp) || isa<ForOp>(parentOp)) {
+    if (parentOp->getNumResults() != op.getNumOperands())
+      return op.emitOpError() << "parent of yield must have same number of "
+                                 "results as the yield operands";
+    for (auto e : llvm::zip(results, operands)) {
+      if (std::get<0>(e).getType() != std::get<1>(e).getType())
+        op.emitOpError() << "types mismatch between yield op and its parent";
+    }
   }
+
   return success();
 }
 
@@ -502,12 +519,12 @@ static ParseResult parseYieldOp(OpAsmParser &parser, OperationState &result) {
 
   return success();
 }
-
+#if 0
 static void print(OpAsmPrinter &p, YieldOp op) {
   p << op.getOperationName() << " " << op.results() << " : "
     << op.getOperandTypes();
 }
-
+#endif
 //===----------------------------------------------------------------------===//
 // TableGen'd op method definitions
 //===----------------------------------------------------------------------===//

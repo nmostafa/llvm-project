@@ -90,9 +90,9 @@ func @std_parallel_loop(%arg0 : index, %arg1 : index, %arg2 : index,
 //  CHECK-NEXT:         %[[RES:.*]] = addf %[[LHS]], %[[RHS]] : f32
 //  CHECK-NEXT:         loop.reduce.return %[[RES]] : f32
 //  CHECK-NEXT:       } : f32
-//  CHECK-NEXT:       "loop.terminator"() : () -> ()
+//  CHECK-NEXT:       "loop.yield"() : () -> ()
 //  CHECK-NEXT:     } : f32
-//  CHECK-NEXT:     "loop.terminator"() : () -> ()
+//  CHECK-NEXT:     "loop.yield"() : () -> ()
 
 
 func @std_if_yield(%arg0: i1, %arg1: f32)
