@@ -92,7 +92,15 @@ def ForOp : Loop_Op<"for",
     void setLowerBound(Value bound) { getOperation()->setOperand(0, bound); }
     void setUpperBound(Value bound) { getOperation()->setOperand(1, bound); }
     void setStep(Value step) { getOperation()->setOperand(2, step); }
-    bool hasIterArgs() { return getOperation()->getNumOperands() > 3; }
+    
+    // number of region arguments for loop-carried values
+    unsigned getNumRegionIterArgs() { return getBody()->getNumArguments() - 1; }
+    // number of operands controlling the loop: lb, ub, step
+    constexpr unsigned getNumCtrlOperands() { return 3; }
+    // does the operation hold operands for loop-carried values
+    bool hasIterOperands() { return getOperation()->getNumOperands() > getNumCtrlOperands(); }
+    // get Number of loop-carried values
+    unsigned getNumIterOperands() { return getOperation()->getNumOperands() - getNumCtrlOperands(); }
   }];
 }
 

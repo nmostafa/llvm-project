@@ -80,6 +80,29 @@ static LogicalResult verify(ForOp op) {
     return op.emitOpError(
         "expected body first argument to be an index argument for "
         "the induction variable");
+
+  // If ForOp define values check that number and types of of defined
+  // values match ForOp initial iter operands and backedge basic block arguments
+  auto opNumResults = op.getNumResults();
+  if (opNumResults != 0) {
+    if (op.getNumIterOperands() != opNumResults)
+      op.emitOpError(
+          "mismatch in number of op loop-carried values and defined values");
+    if (op.getNumRegionIterArgs() != opNumResults)
+      op.emitOpError(
+          "mismatch in number of basic block args and defined values");
+    auto iterOperands = op.getIterOperands();
+    auto iterArgs = op.getRegionIterArgs();
+    auto opResults = op.getResults();
+    for (auto e : llvm::zip(iterOperands, iterArgs, opResults)) {
+      if (std::get<0>(e).getType() != std::get<2>(e).getType())
+        op.emitOpError()
+            << "types mismatch between iter operands and defined values";
+      if (std::get<1>(e).getType() != std::get<2>(e).getType())
+        op.emitOpError()
+            << "types mismatch between iter region args and defined values";
+    }
+  }
   return success();
 }
 
@@ -88,7 +111,8 @@ static void print(OpAsmPrinter &p, ForOp op) {
   p << op.getOperationName() << " " << op.getInductionVar() << " = "
     << op.lowerBound() << " to " << op.upperBound() << " step " << op.step();
 
-  if (op.hasIterArgs()) {
+  if (op.hasIterOperands()) {
+    unsigned numIterOperands = op.getNumIterOperands(), i = 0;
     p << " iter_args(";
     auto regionArgs = op.getRegionIterArgs();
     auto operands = op.getIterOperands();
@@ -96,8 +120,8 @@ static void print(OpAsmPrinter &p, ForOp op) {
       auto operand = std::get<1>(e);
       p << std::get<0>(e) << " = " << std::get<1>(e) << " : ";
       p << operand.getType();
+      p << ((++i == numIterOperands) ? ")" : ", ");
     }
-    p << ")";
   }
   if (!op.results().empty()) {
     p << " -> (" << op.getResultTypes() << ")";
@@ -202,9 +226,8 @@ static LogicalResult verify(IfOp op) {
         return op.emitOpError(
             "requires that child entry blocks have no arguments");
   }
-  // TODO:
-  // IfOp returns a value -> Else region is not empty
-  // Yield Op is present at end of each region
+  if (op.getNumResults() != 0 && op.elseRegion().empty())
+    return op.emitOpError("must have an else block if defining values");
 
   return success();
 }
