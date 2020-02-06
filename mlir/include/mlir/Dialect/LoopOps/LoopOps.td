@@ -40,7 +40,7 @@ def ForOp : Loop_Op<"for",
        SingleBlockImplicitTerminator<"YieldOp">]> {
   let summary = "for operation";
   let description = [{
-    The "loop.for" operation represents a loop nest taking 3 SSA value as
+    The "loop.for" operation represents a loop taking 3 SSA value as
     operands that represent the lower bound, upper bound and step respectively.
     The operation defines an SSA value for its induction variable. It has one
     region capturing the loop body. The induction variable is represented as an
@@ -51,15 +51,68 @@ def ForOp : Loop_Op<"for",
     lower bound but does not include the upper bound.
 
     The body region must contain exactly one block that terminates with
-    "loop.terminator".  Calling ForOp::build will create such region and insert
-    the terminator, so will the parsing even in cases when it is absent from the
-    custom format. For example:
+    "loop.yield".  Calling ForOp::build will create such region and insert
+    the terminator implicitly if none is defined, so will the parsing even in cases 
+    when it is absent from the custom format. For example:
 
     ```mlir
        loop.for %iv = %lb to %ub step %step {
          ... // body
        }
     ```
+
+    "loop.for" can also operate on loop-carried variables and returns the final values
+    after loop termination. The initial values of the variables are passed as additional SSA 
+    operands to the "loop.for" following the 3 loop control SSA values mentioned above
+    (lower bound, upper bound and step). The operation region will have equivalent arguments 
+    for each variable representing the value of the variable at the current iteration.
+    
+    The region must terminate with a yield that passes all the current iteration variables
+    to the next iteration, or to the "loop.for" result, if at the last iteration.
+    "loop.for" result variables hold the final values after the last iteration. 
+    
+    For example, to sum reduce a memref:
+    ```mlir
+    func @reduce(%buffer: memref<1024xf32>, %lb: index, %ub: index, %step: index) -> (f32) {
+      // initial sum set to 0
+      %sum_0 = constant 0.0 : f32
+      // iter_args binds initial values to loop's region arguments
+      %sum = loop.for %iv = %lb to %ub step %step iter_args(%sum_iter = %sum_0 : f32) -> (f32) {
+	      %t = load %buffer[%iv] : memref<1024xf32>
+        %sum_next = addf %sum_iter, %t : f32
+        // yield current iteration sum to next iteration %sum_iter or to %sum if final iteration
+        loop.yield %sum_next : f32
+      }
+      return %sum : f32
+    }   
+    ```
+
+    Notes:
+    1. If the "loop.for" defines any values, a yield must be explicitly present. 
+    2. The number and types of the "loop.for" results must match the initial values 
+    in the "iter_args" binding and the yield operands.
+    
+    Another example that involves a nested "loop.if" (see "loop.if" for details) 
+    to perform conditional reduction:
+    ```mlir
+    func @conditional_reduce(%buffer: memref<1024xf32>, %lb: index, %ub: index, %step: index) -> (f32) {
+      %sum_0 = constant 0.0 : f32
+      %c0 = constant 0.0 : f32
+      %sum = loop.for %iv = %lb to %ub step %step iter_args(%sum_iter = %sum_0 : f32) -> (f32) {
+    	  %t = load %buffer[%iv] : memref<1024xf32>
+    	  %cond = cmpf "ugt", %t, %c0 : f32
+    	  %sum_next = loop.if %cond -> (f32) {
+	        %new_sum = addf %sum_iter, %t : f32
+          loop.yield %new_sum : f32
+	      } else {
+      		loop.yield %sum_iter : f32
+	      }
+        loop.yield %sum_next : f32
+      }
+      return %sum : f32
+    }
+  ```
+    
   }];
   let results = (outs Variadic<AnyType>:$results);
   let arguments = (ins Index:$lowerBound, Index:$upperBound, Index:$step, Variadic<AnyType>:$initArgs);
@@ -110,7 +163,7 @@ def IfOp : Loop_Op<"if",
   let description = [{
     The "loop.if" operation represents an if-then-else construct for
     conditionally executing two regions of code. The operand to an if operation
-    is a boolean value. The operation produces no results. For example:
+    is a boolean value. For example:
 
     ```mlir
        loop.if %b  {
@@ -120,9 +173,27 @@ def IfOp : Loop_Op<"if",
        }
     ```
 
-    The 'else' block is optional, and may be omitted. For
-    example:
+    "loop.if" may also define results that are defined in its regions. The values
+    defined are determined by which execution path is taken. 
+    For example:
+    ```mlir
+       %x, %y = loop.if %b -> (f32) {
+         %x_true = ...
+         %y_true = ...
+         loop.yield %x_true, %y_true : f32, f32
+       } else {
+         %x_false = ... 
+         %y_false = ... 
+         loop.yield %x_false, %y_false : f32, f32
+       }
+    ```
 
+    "loop.if" regions are always terminated with "loop.yield". If "loop.if"
+    defines no values, the "loop.yield" can be left out in the syntax, and will be
+    inserted implicitly. Otherwise, it must be explicitly. A
+    Also, if "loop.if" defines no values, the 'else' block is optional, and may be omitted. 
+    
+    For example:
     ```mlir
        loop.if %b  {
          ...
@@ -180,7 +251,7 @@ def ParallelOp : Loop_Op<"parallel",
     the same number of results as it has reduce operations.
 
     The body region must contain exactly one block that terminates with
-    "loop.terminator". Parsing ParallelOp will create such region and insert the
+    "loop.yield". Parsing ParallelOp will create such region and insert the
     terminator when it is absent from the custom format. For example:
 
     ```mlir
@@ -277,8 +348,11 @@ def ReduceReturnOp :
 def YieldOp : Loop_Op<"yield", [Terminator]> {
   let summary = "cf yield and termination operation";
   let description = [{
-    "loop.yield" yields a value from a loop op region 
-    and terminates the regions.
+    "loop.yield" yields a value from a loop op region and terminates the regions.
+    If it has operands, then parent op must define the same number and types of 
+    operands. If the parent op defines no values, then the "loop.yield" can be 
+    left out in the syntax, and will be inserted implicitly. Otherwise, it has 
+    to be explicitly present. 
   }];
 
   let arguments = (ins Variadic<AnyType>:$results);
@@ -287,29 +361,4 @@ def YieldOp : Loop_Op<"yield", [Terminator]> {
   ];
   let printer = ?;
 }
-
-
-
-//def TerminatorOp : Loop_Op<"terminator", [Terminator]> {
-//  let summary = "cf terminator operation";
-//  let description = [{
-//    "loop.terminator" is a special terminator operation for blocks inside
-//    loops. It terminates the region. This operation does _not_ have a custom
-//    syntax. However, `std` control operations omit the terminator in their
-//    custom syntax for brevity.
-//
-//    ```mlir
-//       loop.terminator
-//    ```
-//  }];
-//
-//  // No custom parsing/printing form.
-//  let parser = ?;
-//  let printer = ?;
-//
-//  // Fully specified by traits.
-//  let verifier = ?;
-//}
-
-
 #endif // LOOP_OPS
