@@ -635,7 +635,7 @@ public:
   parseOptionalColonTypeList(SmallVectorImpl<Type> &result) = 0;
 
   /// Parse a list of assignments of the form
-  /// %x = %y : type, ...
+  /// (%x = %y : type, ...)
   virtual ParseResult
   parseAssignmentList(SmallVectorImpl<OperandType> &lhs, SmallVectorImpl<OperandType> &rhs, SmallVectorImpl<Type> &types) = 0;
 
