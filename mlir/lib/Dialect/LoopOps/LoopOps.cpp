@@ -526,7 +526,6 @@ static LogicalResult verify(YieldOp op) {
         op.emitOpError() << "types mismatch between yield op and its parent";
     }
   }
-
   return success();
 }
 

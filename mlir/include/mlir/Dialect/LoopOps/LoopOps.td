@@ -67,8 +67,8 @@ def ForOp : Loop_Op<"for",
     (lower bound, upper bound and step). The operation region will have equivalent arguments 
     for each variable representing the value of the variable at the current iteration.
     
-    The region must terminate with a yield that passes all the current iteration variables
-    to the next iteration, or to the "loop.for" result, if at the last iteration.
+    The region must terminate with a "loop.yield" that passes all the current iteration 
+    variables to the next iteration, or to the "loop.for" result, if at the last iteration.
     "loop.for" result variables hold the final values after the last iteration. 
     
     For example, to sum-reduce a memref:
@@ -87,11 +87,12 @@ def ForOp : Loop_Op<"for",
       return %sum : f32
     }   
     ```
+
     If the "loop.for" defines any values, a yield must be explicitly present. 
     The number and types of the "loop.for" results must match the initial values 
     in the "iter_args" binding and the yield operands.
     
-    Another example that involves a nested "loop.if" (see "loop.if" for details) 
+    Another example with a nested "loop.if" (see "loop.if" for details) 
     to perform conditional reduction:
 
     ```mlir
@@ -172,11 +173,11 @@ def IfOp : Loop_Op<"if",
        }
     ```
 
-    "loop.if" may also define results that are defined in its regions. The values
+    "loop.if" may also return results that are defined in its regions. The values
     defined are determined by which execution path is taken. 
     For example:
     ```mlir
-       %x, %y = loop.if %b -> (f32) {
+       %x, %y = loop.if %b -> (f32, f32) {
          %x_true = ...
          %y_true = ...
          loop.yield %x_true, %y_true : f32, f32
@@ -188,7 +189,7 @@ def IfOp : Loop_Op<"if",
     ```
 
     "loop.if" regions are always terminated with "loop.yield". If "loop.if"
-    defines no values, the "loop.yield" can be left out in the syntax, and will be
+    defines no values, the "loop.yield" can be left out, and will be
     inserted implicitly. Otherwise, it must be explicitly. A
     Also, if "loop.if" defines no values, the 'else' block is optional, and may be omitted. 
 
@@ -347,10 +348,13 @@ def ReduceReturnOp :
 def YieldOp : Loop_Op<"yield", [Terminator]> {
   let summary = "cf yield and termination operation";
   let description = [{
-    "loop.yield" yields a value from a loop op region and terminates the regions.
-    If it has operands, then parent op must define the same number and types of 
-    operands. If the parent op defines no values, then the "loop.yield" can be 
-    left out in the syntax, and will be inserted implicitly. Otherwise, it has 
+    "loop.yield" yields an SSA value from a loop dialect op region and
+    terminates the regions. The semantics of how the values are yielded
+    is defined by the parent operation. 
+    If "loop.yield" has any operands, then parent op must define the same
+    number and types of the operands. 
+    If the parent op defines no values, then the "loop.yield" can be 
+    left out and will be inserted implicitly. Otherwise, it has 
     to be explicitly present. 
   }];
 
