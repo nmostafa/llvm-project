@@ -542,12 +542,7 @@ static ParseResult parseYieldOp(OpAsmParser &parser, OperationState &result) {
 
   return success();
 }
-#if 0
-static void print(OpAsmPrinter &p, YieldOp op) {
-  p << op.getOperationName() << " " << op.results() << " : "
-    << op.getOperandTypes();
-}
-#endif
+
 //===----------------------------------------------------------------------===//
 // TableGen'd op method definitions
 //===----------------------------------------------------------------------===//

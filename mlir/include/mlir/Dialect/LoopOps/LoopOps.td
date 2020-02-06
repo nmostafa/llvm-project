@@ -71,12 +71,13 @@ def ForOp : Loop_Op<"for",
     to the next iteration, or to the "loop.for" result, if at the last iteration.
     "loop.for" result variables hold the final values after the last iteration. 
     
-    For example, to sum reduce a memref:
+    For example, to sum-reduce a memref:
+    
     ```mlir
     func @reduce(%buffer: memref<1024xf32>, %lb: index, %ub: index, %step: index) -> (f32) {
       // initial sum set to 0
       %sum_0 = constant 0.0 : f32
-      // iter_args binds initial values to loop's region arguments
+      // iter_args binds initial values to the loop's region arguments
       %sum = loop.for %iv = %lb to %ub step %step iter_args(%sum_iter = %sum_0 : f32) -> (f32) {
 	      %t = load %buffer[%iv] : memref<1024xf32>
         %sum_next = addf %sum_iter, %t : f32
@@ -86,14 +87,13 @@ def ForOp : Loop_Op<"for",
       return %sum : f32
     }   
     ```
-
-    Notes:
-    1. If the "loop.for" defines any values, a yield must be explicitly present. 
-    2. The number and types of the "loop.for" results must match the initial values 
+    If the "loop.for" defines any values, a yield must be explicitly present. 
+    The number and types of the "loop.for" results must match the initial values 
     in the "iter_args" binding and the yield operands.
     
     Another example that involves a nested "loop.if" (see "loop.if" for details) 
     to perform conditional reduction:
+
     ```mlir
     func @conditional_reduce(%buffer: memref<1024xf32>, %lb: index, %ub: index, %step: index) -> (f32) {
       %sum_0 = constant 0.0 : f32
@@ -112,7 +112,6 @@ def ForOp : Loop_Op<"for",
       return %sum : f32
     }
   ```
-    
   }];
   let results = (outs Variadic<AnyType>:$results);
   let arguments = (ins Index:$lowerBound, Index:$upperBound, Index:$step, Variadic<AnyType>:$initArgs);
@@ -192,7 +191,7 @@ def IfOp : Loop_Op<"if",
     defines no values, the "loop.yield" can be left out in the syntax, and will be
     inserted implicitly. Otherwise, it must be explicitly. A
     Also, if "loop.if" defines no values, the 'else' block is optional, and may be omitted. 
-    
+
     For example:
     ```mlir
        loop.if %b  {
