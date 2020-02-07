@@ -86,7 +86,7 @@ static LogicalResult verify(ForOp op) {
     return success();
   // If ForOp defines values, check that the number and types of
   // the defined values match ForOp initial iter operands and backedge
-  // basic block arguments.  
+  // basic block arguments.
   if (op.getNumIterOperands() != opNumResults)
     return op.emitOpError(
         "mismatch in number of op loop-carried values and defined values");

@@ -365,7 +365,7 @@ def YieldOp : Loop_Op<"yield", [Terminator]> {
 
   let arguments = (ins Variadic<AnyType>:$results);
   let builders = [
-    OpBuilder<"Builder *builder, OperationState &result", [{}]>
+    OpBuilder<"Builder *builder, OperationState &result", [{ /* nothing to do */ }]>
   ];
 
   let printer = ?;
