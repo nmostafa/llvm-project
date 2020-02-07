@@ -81,28 +81,28 @@ static LogicalResult verify(ForOp op) {
         "expected body first argument to be an index argument for "
         "the induction variable");
 
+  auto opNumResults = op.getNumResults();
+  if (opNumResults == 0)
+    return success();
   // If ForOp defines values, check that the number and types of
   // the defined values match ForOp initial iter operands and backedge
-  // basic block arguments.
-  auto opNumResults = op.getNumResults();
-  if (opNumResults != 0) {
-    if (op.getNumIterOperands() != opNumResults)
-      return op.emitOpError(
-          "mismatch in number of op loop-carried values and defined values");
-    if (op.getNumRegionIterArgs() != opNumResults)
-      return op.emitOpError(
-          "mismatch in number of basic block args and defined values");
-    auto iterOperands = op.getIterOperands();
-    auto iterArgs = op.getRegionIterArgs();
-    auto opResults = op.getResults();
-    for (auto e : llvm::zip(iterOperands, iterArgs, opResults)) {
-      if (std::get<0>(e).getType() != std::get<2>(e).getType())
-        return op.emitOpError()
-               << "types mismatch between iter operands and defined values";
-      if (std::get<1>(e).getType() != std::get<2>(e).getType())
-        return op.emitOpError()
-               << "types mismatch between iter region args and defined values";
-    }
+  // basic block arguments.  
+  if (op.getNumIterOperands() != opNumResults)
+    return op.emitOpError(
+        "mismatch in number of op loop-carried values and defined values");
+  if (op.getNumRegionIterArgs() != opNumResults)
+    return op.emitOpError(
+        "mismatch in number of basic block args and defined values");
+  auto iterOperands = op.getIterOperands();
+  auto iterArgs = op.getRegionIterArgs();
+  auto opResults = op.getResults();
+  for (auto e : llvm::zip(iterOperands, iterArgs, opResults)) {
+    if (std::get<0>(e).getType() != std::get<2>(e).getType())
+      return op.emitOpError()
+             << "types mismatch between iter operands and defined values";
+    if (std::get<1>(e).getType() != std::get<2>(e).getType())
+      return op.emitOpError()
+             << "types mismatch between iter region args and defined values";
   }
   return success();
 }
