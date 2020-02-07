@@ -508,8 +508,6 @@ static void print(OpAsmPrinter &p, ReduceReturnOp op) {
 //===----------------------------------------------------------------------===//
 // YieldOp
 //===----------------------------------------------------------------------===//
-void YieldOp::build(Builder *builder, OperationState &result) {}
-
 static LogicalResult verify(YieldOp op) {
   auto parentOp = op.getParentOp();
   auto results = parentOp->getResults();
