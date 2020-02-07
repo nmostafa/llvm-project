@@ -81,7 +81,7 @@ static LogicalResult verify(ForOp op) {
         "expected body first argument to be an index argument for "
         "the induction variable");
 
-  // If ForOp defines values, check that the number and types of 
+  // If ForOp defines values, check that the number and types of
   // the defined values match ForOp initial iter operands and backedge
   // basic block arguments.
   auto opNumResults = op.getNumResults();
