@@ -115,7 +115,10 @@ def ForOp : Loop_Op<"for",
   ```
   }];
   let results = (outs Variadic<AnyType>:$results);
-  let arguments = (ins Index:$lowerBound, Index:$upperBound, Index:$step, Variadic<AnyType>:$initArgs);
+  let arguments = (ins Index:$lowerBound,
+                       Index:$upperBound,
+                       Index:$step,
+                       Variadic<AnyType>:$initArgs);
   let regions = (region SizedRegion<1>:$region);
 
   let skipDefaultBuilders = 1;
@@ -131,29 +134,30 @@ def ForOp : Loop_Op<"for",
       return OpBuilder(getBody(), std::prev(getBody()->end()));
     }
     iterator_range<Block::args_iterator> getRegionIterArgs() {
-      auto iterArgsBegin = getBody()->args_begin();
-      std::advance(iterArgsBegin, 1);
-      return {iterArgsBegin, getBody()->args_end()};
+      return getBody()->getArguments().drop_front();
     }
     iterator_range<Operation::operand_iterator> getIterOperands() {
-      auto operands = getOperation()->getOperands();
-      auto iterOpndBegin = operands.begin();
-      std::advance(iterOpndBegin, getNumCtrlOperands());
-      return {iterOpndBegin, operands.end()};
+      return getOperands().drop_front(getNumCtrlOperands());
     }
 
     void setLowerBound(Value bound) { getOperation()->setOperand(0, bound); }
     void setUpperBound(Value bound) { getOperation()->setOperand(1, bound); }
     void setStep(Value step) { getOperation()->setOperand(2, step); }
     
-    // number of region arguments for loop-carried values
-    unsigned getNumRegionIterArgs() { return getBody()->getNumArguments() - 1; }
-    // number of operands controlling the loop: lb, ub, step
+    /// Number of region arguments for loop-carried values
+    unsigned getNumRegionIterArgs() {
+      return getBody()->getNumArguments() - 1; 
+    }
+    /// Number of operands controlling the loop: lb, ub, step
     constexpr unsigned getNumCtrlOperands() { return 3; }
-    // does the operation hold operands for loop-carried values
-    bool hasIterOperands() { return getOperation()->getNumOperands() > getNumCtrlOperands(); }
-    // get Number of loop-carried values
-    unsigned getNumIterOperands() { return getOperation()->getNumOperands() - getNumCtrlOperands(); }
+    /// Does the operation hold operands for loop-carried values
+    bool hasIterOperands() { 
+      return getOperation()->getNumOperands() > getNumCtrlOperands();
+    }
+    /// Get Number of loop-carried values
+    unsigned getNumIterOperands() {
+      return getOperation()->getNumOperands() - getNumCtrlOperands();
+    }
   }];
 }
 
@@ -190,8 +194,9 @@ def IfOp : Loop_Op<"if",
 
     "loop.if" regions are always terminated with "loop.yield". If "loop.if"
     defines no values, the "loop.yield" can be left out, and will be
-    inserted implicitly. Otherwise, it must be explicitly. A
-    Also, if "loop.if" defines no values, the 'else' block is optional, and may be omitted. 
+    inserted implicitly. Otherwise, it must be explicit.
+    Also, if "loop.if" defines no values, the 'else' block is optional,
+    and may be omitted. 
 
     For example:
     ```mlir
@@ -200,8 +205,8 @@ def IfOp : Loop_Op<"if",
        }
     ```
   }];
-  let results = (outs Variadic<AnyType>:$results);
   let arguments = (ins I1:$condition);
+  let results = (outs Variadic<AnyType>:$results);
   let regions = (region SizedRegion<1>:$thenRegion, AnyRegion:$elseRegion);
 
   let skipDefaultBuilders = 1;
@@ -351,7 +356,7 @@ def YieldOp : Loop_Op<"yield", [Terminator]> {
     "loop.yield" yields an SSA value from a loop dialect op region and
     terminates the regions. The semantics of how the values are yielded
     is defined by the parent operation. 
-    If "loop.yield" has any operands, then parent op must define the same
+    If "loop.yield" has any operands, the parent op must define the same
     number and types of the operands. 
     If the parent op defines no values, then the "loop.yield" can be 
     left out and will be inserted implicitly. Otherwise, it has 

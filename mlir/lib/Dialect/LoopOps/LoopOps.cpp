@@ -86,20 +86,20 @@ static LogicalResult verify(ForOp op) {
   auto opNumResults = op.getNumResults();
   if (opNumResults != 0) {
     if (op.getNumIterOperands() != opNumResults)
-      op.emitOpError(
+      return op.emitOpError(
           "mismatch in number of op loop-carried values and defined values");
     if (op.getNumRegionIterArgs() != opNumResults)
-      op.emitOpError(
+      return op.emitOpError(
           "mismatch in number of basic block args and defined values");
     auto iterOperands = op.getIterOperands();
     auto iterArgs = op.getRegionIterArgs();
     auto opResults = op.getResults();
     for (auto e : llvm::zip(iterOperands, iterArgs, opResults)) {
       if (std::get<0>(e).getType() != std::get<2>(e).getType())
-        op.emitOpError()
+        return op.emitOpError()
             << "types mismatch between iter operands and defined values";
       if (std::get<1>(e).getType() != std::get<2>(e).getType())
-        op.emitOpError()
+        return op.emitOpError()
             << "types mismatch between iter region args and defined values";
     }
   }
@@ -155,7 +155,7 @@ static ParseResult parseForOp(OpAsmParser &parser, OperationState &result) {
   SmallVector<Type, 4> argTypes;
   regionArgs.push_back(inductionVariable);
 
-  if (!parser.parseOptionalKeyword("iter_args")) {
+  if (succeeded(parser.parseOptionalKeyword("iter_args"))) {
     parser.parseAssignmentList(regionArgs, operands, argTypes);
     // resolve input operands
     for (auto operand_type : llvm::zip(operands, argTypes))
@@ -515,7 +515,7 @@ static LogicalResult verify(YieldOp op) {
 
   if (!isa<IfOp>(parentOp) && !isa<ForOp>(parentOp) &&
       !isa<ParallelOp>(parentOp))
-    return op.emitError() << "yield terminate If, For or Parallel regions";
+    return op.emitOpError() << "yield terminate If, For or Parallel regions";
 
   if (isa<IfOp>(parentOp) || isa<ForOp>(parentOp)) {
     if (parentOp->getNumResults() != op.getNumOperands())
@@ -523,7 +523,7 @@ static LogicalResult verify(YieldOp op) {
                                  "results as the yield operands";
     for (auto e : llvm::zip(results, operands)) {
       if (std::get<0>(e).getType() != std::get<1>(e).getType())
-        op.emitOpError() << "types mismatch between yield op and its parent";
+        return op.emitOpError() << "types mismatch between yield op and its parent";
     }
   }
   return success();
