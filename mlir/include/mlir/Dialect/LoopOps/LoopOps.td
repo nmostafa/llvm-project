@@ -47,13 +47,13 @@ def ForOp : Loop_Op<"for",
     argument of this region. This SSA value always has type index, which is the
     size of the machine word. The step is a value of type index, required to be
     positive.
-    The lower and upper bounds specify a half-open range: the range includes the
-    lower bound but does not include the upper bound.
+    The lower and upper bounds specify a half-open range: the range includes
+    the lower bound but does not include the upper bound.
 
     The body region must contain exactly one block that terminates with
-    "loop.yield".  Calling ForOp::build will create such region and insert
-    the terminator implicitly if none is defined, so will the parsing even in cases 
-    when it is absent from the custom format. For example:
+    "loop.yield".  Calling ForOp::build will create such a region and insert
+    the terminator implicitly if none is defined, so will the parsing even 
+    in cases when it is absent from the custom format. For example:
 
     ```mlir
        loop.for %iv = %lb to %ub step %step {
@@ -64,12 +64,12 @@ def ForOp : Loop_Op<"for",
     "loop.for" can also operate on loop-carried variables and returns the final values
     after loop termination. The initial values of the variables are passed as additional SSA 
     operands to the "loop.for" following the 3 loop control SSA values mentioned above
-    (lower bound, upper bound and step). The operation region will have equivalent arguments 
+    (lower bound, upper bound and step). The operation region has equivalent arguments 
     for each variable representing the value of the variable at the current iteration.
     
     The region must terminate with a "loop.yield" that passes all the current iteration 
     variables to the next iteration, or to the "loop.for" result, if at the last iteration.
-    "loop.for" result variables hold the final values after the last iteration. 
+    "loop.for" results hold the final values after the last iteration. 
     
     For example, to sum-reduce a memref:
     
@@ -195,8 +195,8 @@ def IfOp : Loop_Op<"if",
     "loop.if" regions are always terminated with "loop.yield". If "loop.if"
     defines no values, the "loop.yield" can be left out, and will be
     inserted implicitly. Otherwise, it must be explicit.
-    Also, if "loop.if" defines no values, the 'else' block is optional,
-    and may be omitted. 
+    Also, if "loop.if" defines one or more values, the 'else' block cannot
+    be omitted. 
 
     For example:
     ```mlir
@@ -256,7 +256,7 @@ def ParallelOp : Loop_Op<"parallel",
     the same number of results as it has reduce operations.
 
     The body region must contain exactly one block that terminates with
-    "loop.yield". Parsing ParallelOp will create such region and insert the
+    "loop.yield". Parsing ParallelOp will create such a region and insert the
     terminator when it is absent from the custom format. For example:
 
     ```mlir
@@ -356,8 +356,8 @@ def YieldOp : Loop_Op<"yield", [Terminator]> {
     "loop.yield" yields an SSA value from a loop dialect op region and
     terminates the regions. The semantics of how the values are yielded
     is defined by the parent operation. 
-    If "loop.yield" has any operands, the parent op must define the same
-    number and types of the operands. 
+    If "loop.yield" has any operands, the operands must match the parent
+    operation's results. 
     If the parent op defines no values, then the "loop.yield" can be 
     left out and will be inserted implicitly. Otherwise, it has 
     to be explicitly present. 

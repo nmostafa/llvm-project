@@ -81,8 +81,9 @@ static LogicalResult verify(ForOp op) {
         "expected body first argument to be an index argument for "
         "the induction variable");
 
-  // If ForOp define values check that number and types of of defined
-  // values match ForOp initial iter operands and backedge basic block arguments
+  // If ForOp defines values, check that the number and types of 
+  // the defined values match ForOp initial iter operands and backedge
+  // basic block arguments.
   auto opNumResults = op.getNumResults();
   if (opNumResults != 0) {
     if (op.getNumIterOperands() != opNumResults)
@@ -150,21 +151,21 @@ static ParseResult parseForOp(OpAsmParser &parser, OperationState &result) {
       parser.resolveOperand(step, indexType, result.operands))
     return failure();
 
-  // Parse the optional initial iteration arguments
+  // Parse the optional initial iteration arguments.
   SmallVector<OpAsmParser::OperandType, 4> regionArgs, operands;
   SmallVector<Type, 4> argTypes;
   regionArgs.push_back(inductionVariable);
 
   if (succeeded(parser.parseOptionalKeyword("iter_args"))) {
     parser.parseAssignmentList(regionArgs, operands, argTypes);
-    // resolve input operands
+    // Resolve input operands.
     for (auto operand_type : llvm::zip(operands, argTypes))
       parser.resolveOperand(std::get<0>(operand_type),
                             std::get<1>(operand_type), result.operands);
   }
   argTypes.insert(argTypes.begin(), indexType);
 
-  // Parse optional results type list
+  // Parse optional results type list.
   if (parser.parseOptionalArrowTypeList(result.types))
     return failure();
   // Parse the body region.
@@ -245,7 +246,7 @@ static ParseResult parseIfOp(OpAsmParser &parser, OperationState &result) {
   if (parser.parseOperand(cond) ||
       parser.resolveOperand(cond, i1Type, result.operands))
     return failure();
-  // Parse optional results type list
+  // Parse optional results type list.
   if (parser.parseOptionalArrowTypeList(result.types))
     return failure();
   // Parse the 'then' region.
@@ -272,7 +273,7 @@ static void print(OpAsmPrinter &p, IfOp op) {
   p << IfOp::getOperationName() << " " << op.condition();
   if (!op.results().empty()) {
     p << " -> (" << op.getResultTypes() << ")";
-    // print yield explicitly if the op defines values
+    // Print yield explicitly if the op defines values.
     printBlockTerminators = true;
   }
   p.printRegion(op.thenRegion(),
@@ -537,7 +538,7 @@ static ParseResult parseYieldOp(OpAsmParser &parser, OperationState &result) {
   SmallVector<Type, 4> types;
   llvm::SMLoc loc = parser.getCurrentLocation();
   // Parse variadic operands list, their types, and resolve operands to SSA
-  // values
+  // values.
   if (parser.parseOperandList(operands) || parser.parseColonTypeList(types) ||
       parser.resolveOperands(operands, types, loc, result.operands))
     return failure();
