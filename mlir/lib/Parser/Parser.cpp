@@ -4329,12 +4329,14 @@ public:
   /// Parse an assignment list of the form
   /// (%a = %b : type1, ... )
   /// The list must contain at least one entry
-  ParseResult
-  parseAssignmentList(SmallVectorImpl<OperandType> &lhs, SmallVectorImpl<OperandType> &rhs, SmallVectorImpl<Type> &types) {
+  ParseResult parseAssignmentList(SmallVectorImpl<OperandType> &lhs,
+                                  SmallVectorImpl<OperandType> &rhs,
+                                  SmallVectorImpl<Type> &types) {
     auto parseElt = [&]() -> ParseResult {
       OperandType regionArg, operand;
       Type type;
-      if (parseRegionArgument(regionArg) || parseEqual() || parseOperand(operand) || parseColon() || parseType(type))
+      if (parseRegionArgument(regionArg) || parseEqual() ||
+          parseOperand(operand) || parseColon() || parseType(type))
         return failure();
       lhs.push_back(regionArg);
       types.push_back(type);
@@ -4345,6 +4347,7 @@ public:
       return failure();
     return parser.parseCommaSeparatedListUntil(Token::r_paren, parseElt);
   }
+
 private:
   /// The source location of the operation name.
   SMLoc nameLoc;

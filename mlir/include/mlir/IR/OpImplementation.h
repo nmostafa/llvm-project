@@ -636,8 +636,9 @@ public:
 
   /// Parse a list of assignments of the form
   /// (%x = %y : type, ...)
-  virtual ParseResult
-  parseAssignmentList(SmallVectorImpl<OperandType> &lhs, SmallVectorImpl<OperandType> &rhs, SmallVectorImpl<Type> &types) = 0;
+  virtual ParseResult parseAssignmentList(SmallVectorImpl<OperandType> &lhs,
+                                          SmallVectorImpl<OperandType> &rhs,
+                                          SmallVectorImpl<Type> &types) = 0;
 
   /// Parse a keyword followed by a type.
   ParseResult parseKeywordType(const char *keyword, Type &result) {

@@ -97,10 +97,10 @@ static LogicalResult verify(ForOp op) {
     for (auto e : llvm::zip(iterOperands, iterArgs, opResults)) {
       if (std::get<0>(e).getType() != std::get<2>(e).getType())
         return op.emitOpError()
-            << "types mismatch between iter operands and defined values";
+               << "types mismatch between iter operands and defined values";
       if (std::get<1>(e).getType() != std::get<2>(e).getType())
         return op.emitOpError()
-            << "types mismatch between iter region args and defined values";
+               << "types mismatch between iter region args and defined values";
     }
   }
   return success();
@@ -159,7 +159,8 @@ static ParseResult parseForOp(OpAsmParser &parser, OperationState &result) {
     parser.parseAssignmentList(regionArgs, operands, argTypes);
     // resolve input operands
     for (auto operand_type : llvm::zip(operands, argTypes))
-      parser.resolveOperand(std::get<0>(operand_type),std::get<1>(operand_type), result.operands);
+      parser.resolveOperand(std::get<0>(operand_type),
+                            std::get<1>(operand_type), result.operands);
   }
   argTypes.insert(argTypes.begin(), indexType);
 
@@ -523,7 +524,8 @@ static LogicalResult verify(YieldOp op) {
                                  "results as the yield operands";
     for (auto e : llvm::zip(results, operands)) {
       if (std::get<0>(e).getType() != std::get<1>(e).getType())
-        return op.emitOpError() << "types mismatch between yield op and its parent";
+        return op.emitOpError()
+               << "types mismatch between yield op and its parent";
     }
   }
   return success();
