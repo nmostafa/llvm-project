@@ -351,3 +351,17 @@ func @std_for_operands_mismatch_2(%arg0 : index, %arg1 : index, %arg2 : index) {
   }
   return
 }
+
+// -----
+
+func @std_for_operands_mismatch_3(%arg0 : index, %arg1 : index, %arg2 : index) {
+  %s0 = constant 0.0 : f32
+  %t0 = constant 1.0 : f32
+  // expected-error@+1 {{types mismatch between iter operands and defined values}}
+  %result1:2 = loop.for %i0 = %arg0 to %arg1 step %arg2 iter_args(%si = %s0 : f32, %ti = %t0 : f32) -> (i32, i32) {
+    %sn = addf %si, %si : f32
+    %tn = addf %ti, %ti : f32
+    loop.yield %sn, %tn : f32, f32
+  }
+  return
+}

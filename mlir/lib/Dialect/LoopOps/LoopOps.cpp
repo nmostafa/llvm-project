@@ -516,7 +516,8 @@ static LogicalResult verify(YieldOp op) {
 
   if (!isa<IfOp>(parentOp) && !isa<ForOp>(parentOp) &&
       !isa<ParallelOp>(parentOp))
-    return op.emitOpError() << "yield terminate If, For or Parallel regions";
+    return op.emitOpError()
+           << "yield only terminates If, For or Parallel regions";
 
   if (isa<IfOp>(parentOp) || isa<ForOp>(parentOp)) {
     if (parentOp->getNumResults() != op.getNumOperands())
@@ -535,7 +536,7 @@ static ParseResult parseYieldOp(OpAsmParser &parser, OperationState &result) {
   SmallVector<OpAsmParser::OperandType, 4> operands;
   SmallVector<Type, 4> types;
   llvm::SMLoc loc = parser.getCurrentLocation();
-  // parser variadic opreands list, their types, and resolve operands to SSA
+  // Parse variadic operands list, their types, and resolve operands to SSA
   // values
   if (parser.parseOperandList(operands) || parser.parseColonTypeList(types) ||
       parser.resolveOperands(operands, types, loc, result.operands))

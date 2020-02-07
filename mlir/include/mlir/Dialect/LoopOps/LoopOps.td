@@ -114,11 +114,11 @@ def ForOp : Loop_Op<"for",
     }
   ```
   }];
-  let results = (outs Variadic<AnyType>:$results);
   let arguments = (ins Index:$lowerBound,
                        Index:$upperBound,
                        Index:$step,
                        Variadic<AnyType>:$initArgs);
+  let results = (outs Variadic<AnyType>:$results);                       
   let regions = (region SizedRegion<1>:$region);
 
   let skipDefaultBuilders = 1;
@@ -367,6 +367,7 @@ def YieldOp : Loop_Op<"yield", [Terminator]> {
   let builders = [
     OpBuilder<"Builder *builder, OperationState &result">
   ];
+
   let printer = ?;
 }
 #endif // LOOP_OPS
