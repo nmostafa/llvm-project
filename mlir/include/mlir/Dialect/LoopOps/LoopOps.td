@@ -256,8 +256,8 @@ def ParallelOp : Loop_Op<"parallel",
     the same number of results as it has reduce operations.
 
     The body region must contain exactly one block that terminates with
-    "loop.yield". Parsing ParallelOp will create such a region and insert the
-    terminator when it is absent from the custom format. For example:
+    "loop.yield" without operands. Parsing ParallelOp will create such a region
+    and insert the terminator when it is absent from the custom format. For example:
 
     ```mlir
        loop.parallel (%iv) = (%lb) to (%ub) step (%step) {
