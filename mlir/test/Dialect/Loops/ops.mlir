@@ -94,6 +94,23 @@ func @std_parallel_loop(%arg0 : index, %arg1 : index, %arg2 : index,
 //  CHECK-NEXT:     } : f32
 //  CHECK-NEXT:     loop.yield
 
+func @parallel_explicit_yield(
+    %arg0: index, %arg1: index, %arg2: index) {
+  loop.parallel (%i0) = (%arg0) to (%arg1) step (%arg2) {
+    loop.yield
+  }
+  return
+}
+
+// CHECK-LABEL: func @parallel_explicit_yield(
+//  CHECK-SAME: %[[ARG0:[A-Za-z0-9]+]]:
+//  CHECK-SAME: %[[ARG1:[A-Za-z0-9]+]]:
+//  CHECK-SAME: %[[ARG2:[A-Za-z0-9]+]]:
+//  CHECK-NEXT: loop.parallel (%{{.*}}) = (%[[ARG0]]) to (%[[ARG1]]) step (%[[ARG2]])
+//  CHECK-NEXT: loop.yield
+//  CHECK-NEXT: }
+//  CHECK-NEXT: return
+//  CHECK-NEXT: }
 
 func @std_if_yield(%arg0: i1, %arg1: f32)
 {

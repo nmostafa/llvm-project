@@ -497,11 +497,6 @@ static LogicalResult verify(YieldOp op) {
   auto results = parentOp->getResults();
   auto operands = op.getOperands();
 
-  if (!isa<IfOp>(parentOp) && !isa<ForOp>(parentOp) &&
-      !isa<ParallelOp>(parentOp))
-    return op.emitOpError()
-           << "yield only terminates If, For or Parallel regions";
-
   if (isa<IfOp>(parentOp) || isa<ForOp>(parentOp)) {
     if (parentOp->getNumResults() != op.getNumOperands())
       return op.emitOpError() << "parent of yield must have same number of "
@@ -511,7 +506,14 @@ static LogicalResult verify(YieldOp op) {
         return op.emitOpError()
                << "types mismatch between yield op and its parent";
     }
-  }
+  } else if (isa<ParallelOp>(parentOp)) {
+    if (op.getNumOperands() != 0)
+      return op.emitOpError()
+             << "yield inside loop.parallel is not allowed to have operands";
+  } else
+    return op.emitOpError()
+           << "yield only terminates If, For or Parallel regions";
+
   return success();
 }
 

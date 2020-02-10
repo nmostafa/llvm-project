@@ -365,3 +365,15 @@ func @std_for_operands_mismatch_3(%arg0 : index, %arg1 : index, %arg2 : index) {
   }
   return
 }
+
+// -----
+
+func @parallel_invalid_yield(
+    %arg0: index, %arg1: index, %arg2: index) {
+  loop.parallel (%i0) = (%arg0) to (%arg1) step (%arg2) {
+    %c0 = constant 1.0 : f32
+    // expected-error@+1 {{yield inside loop.parallel is not allowed to have operands}}
+    loop.yield %c0 : f32
+  }
+  return
+}
