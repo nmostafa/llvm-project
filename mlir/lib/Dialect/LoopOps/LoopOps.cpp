@@ -521,11 +521,17 @@ static ParseResult parseYieldOp(OpAsmParser &parser, OperationState &result) {
   llvm::SMLoc loc = parser.getCurrentLocation();
   // Parse variadic operands list, their types, and resolve operands to SSA
   // values.
-  if (parser.parseOperandList(operands) || parser.parseColonTypeList(types) ||
+  if (parser.parseOperandList(operands) ||
+      parser.parseOptionalColonTypeList(types) ||
       parser.resolveOperands(operands, types, loc, result.operands))
     return failure();
-
   return success();
+}
+
+static void print(OpAsmPrinter &p, YieldOp op) {
+  p << op.getOperationName();
+  if (op.getNumOperands() != 0)
+    p << ' ' << op.getOperands() << " : " << op.getOperandTypes();
 }
 
 //===----------------------------------------------------------------------===//

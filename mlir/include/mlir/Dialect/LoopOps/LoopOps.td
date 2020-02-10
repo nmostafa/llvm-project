@@ -368,7 +368,5 @@ def YieldOp : Loop_Op<"yield", [Terminator]> {
   let builders = [
     OpBuilder<"Builder *builder, OperationState &result", [{ /* nothing to do */ }]>
   ];
-
-  let printer = ?;
 }
 #endif // LOOP_OPS
