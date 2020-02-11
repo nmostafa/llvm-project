@@ -620,10 +620,12 @@ static Value *optimizeWithRcp(Value *Num, Value *Den, bool AllowInaccurateRcp,
     return nullptr;
 
   Type *Ty = Den->getType();
-  Function *Decl = Intrinsic::getDeclaration(Mod, Intrinsic::amdgcn_rcp, Ty);
   if (const ConstantFP *CLHS = dyn_cast<ConstantFP>(Num)) {
     if (AllowInaccurateRcp || RcpIsAccurate) {
       if (CLHS->isExactlyValue(1.0)) {
+        Function *Decl = Intrinsic::getDeclaration(
+          Mod, Intrinsic::amdgcn_rcp, Ty);
+
         // v_rcp_f32 and v_rsq_f32 do not support denormals, and according to
         // the CI documentation has a worst case error of 1 ulp.
         // OpenCL requires <= 2.5 ulp for 1.0 / x, so it should always be OK to
@@ -636,10 +638,13 @@ static Value *optimizeWithRcp(Value *Num, Value *Den, bool AllowInaccurateRcp,
 
         // 1.0 / x -> rcp(x)
         return Builder.CreateCall(Decl, { Den });
-       }
+      }
 
        // Same as for 1.0, but expand the sign out of the constant.
-       if (CLHS->isExactlyValue(-1.0)) {
+      if (CLHS->isExactlyValue(-1.0)) {
+        Function *Decl = Intrinsic::getDeclaration(
+          Mod, Intrinsic::amdgcn_rcp, Ty);
+
          // -1.0 / x -> rcp (fneg x)
          Value *FNeg = Builder.CreateFNeg(Den);
          return Builder.CreateCall(Decl, { FNeg });
@@ -648,6 +653,9 @@ static Value *optimizeWithRcp(Value *Num, Value *Den, bool AllowInaccurateRcp,
   }
 
   if (AllowInaccurateRcp) {
+    Function *Decl = Intrinsic::getDeclaration(
+      Mod, Intrinsic::amdgcn_rcp, Ty);
+
     // Turn into multiply by the reciprocal.
     // x / y -> x * (1.0 / y)
     Value *Recip = Builder.CreateCall(Decl, { Den });
@@ -847,7 +855,9 @@ Value* AMDGPUCodeGenPrepare::expandDivRem24(IRBuilder<> &Builder,
   Value *FB = IsSigned ? Builder.CreateSIToFP(IB,F32Ty)
                        : Builder.CreateUIToFP(IB,F32Ty);
 
-  Value *RCP = Builder.CreateFDiv(ConstantFP::get(F32Ty, 1.0), FB);
+  Function *RcpDecl = Intrinsic::getDeclaration(Mod, Intrinsic::amdgcn_rcp,
+                                                Builder.getFloatTy());
+  Value *RCP = Builder.CreateCall(RcpDecl, { FB });
   Value *FQM = Builder.CreateFMul(FA, RCP);
 
   // fq = trunc(fqm);
@@ -957,7 +967,10 @@ Value* AMDGPUCodeGenPrepare::expandDivRem32(IRBuilder<> &Builder,
   // RCP =  URECIP(Den) = 2^32 / Den + e
   // e is rounding error.
   Value *DEN_F32 = Builder.CreateUIToFP(Den, F32Ty);
-  Value *RCP_F32 = Builder.CreateFDiv(ConstantFP::get(F32Ty, 1.0), DEN_F32);
+
+  Function *RcpDecl = Intrinsic::getDeclaration(Mod, Intrinsic::amdgcn_rcp,
+                                                Builder.getFloatTy());
+  Value *RCP_F32 = Builder.CreateCall(RcpDecl, { DEN_F32 });
   Constant *UINT_MAX_PLUS_1 = ConstantFP::get(F32Ty, BitsToFloat(0x4f800000));
   Value *RCP_SCALE = Builder.CreateFMul(RCP_F32, UINT_MAX_PLUS_1);
   Value *RCP = Builder.CreateFPToUI(RCP_SCALE, I32Ty);

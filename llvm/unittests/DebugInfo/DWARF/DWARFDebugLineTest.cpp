@@ -180,7 +180,7 @@ void checkDefaultPrologue(uint16_t Version, DwarfFormat Format,
     UnitLength = PrologueLength + 2;
     break;
   case 5:
-    PrologueLength = 39;
+    PrologueLength = 42;
     UnitLength = PrologueLength + 4;
     EXPECT_EQ(Prologue.getAddressSize(), 8u);
     EXPECT_EQ(Prologue.SegSelectorSize, 0u);
@@ -204,6 +204,7 @@ void checkDefaultPrologue(uint16_t Version, DwarfFormat Format,
   EXPECT_STREQ(*Prologue.IncludeDirectories[0].getAsCString(), "a dir");
   ASSERT_EQ(Prologue.FileNames.size(), 1u);
   ASSERT_EQ(Prologue.FileNames[0].Name.getForm(), DW_FORM_string);
+  ASSERT_EQ(Prologue.FileNames[0].DirIdx, 0u);
   EXPECT_STREQ(*Prologue.FileNames[0].Name.getAsCString(), "a file");
 }
 
@@ -914,6 +915,53 @@ TEST_F(DebugLineBasicFixture, ParserPrintsStandardOpcodesWhenRequested) {
   EXPECT_TRUE(InOutput("0x0000003d: 0a DW_LNS_set_prologue_end\n")) << Output;
   EXPECT_TRUE(InOutput("0x0000003e: 0b DW_LNS_set_epilogue_begin\n")) << Output;
   EXPECT_TRUE(InOutput("0x0000003f: 0c DW_LNS_set_isa (66)\n")) << Output;
+}
+
+TEST_F(DebugLineBasicFixture, PrintPathsProperly) {
+  if (!setupGenerator(5))
+    return;
+
+  LineTable &LT = Gen->addLineTable();
+  DWARFDebugLine::Prologue P = LT.createBasicPrologue();
+  P.IncludeDirectories.push_back(
+      DWARFFormValue::createFromPValue(DW_FORM_string, "b dir"));
+  P.FileNames.push_back(DWARFDebugLine::FileNameEntry());
+  P.FileNames.back().Name =
+      DWARFFormValue::createFromPValue(DW_FORM_string, "b file");
+  P.FileNames.back().DirIdx = 1;
+  P.PrologueLength += 14;
+  LT.setPrologue(P);
+  generate();
+
+  auto ExpectedLineTable = Line.getOrParseLineTable(LineData, 0, *Context,
+                                                    nullptr, RecordRecoverable);
+  EXPECT_THAT_EXPECTED(ExpectedLineTable, Succeeded());
+  std::string Result;
+  // DWARF 5 stores the compilation directory in two places: the Compilation
+  // Unit and the directory table entry 0, and implementations are free to use
+  // one or the other. This copy serves as the one stored in the CU.
+  StringRef CompDir = "a dir";
+  EXPECT_FALSE(
+      (*ExpectedLineTable)
+          ->Prologue.getFileNameByIndex(
+              1, CompDir, DILineInfoSpecifier::FileLineInfoKind::None, Result));
+  EXPECT_TRUE((*ExpectedLineTable)
+                  ->Prologue.getFileNameByIndex(
+                      1, CompDir,
+                      DILineInfoSpecifier::FileLineInfoKind::Default, Result));
+  EXPECT_STREQ(Result.c_str(), "b file");
+  EXPECT_TRUE((*ExpectedLineTable)
+                  ->Prologue.getFileNameByIndex(
+                      1, CompDir,
+                      DILineInfoSpecifier::FileLineInfoKind::RelativeFilePath,
+                      Result));
+  EXPECT_THAT(Result.c_str(), MatchesRegex("b dir.b file"));
+  EXPECT_TRUE((*ExpectedLineTable)
+                  ->Prologue.getFileNameByIndex(
+                      1, CompDir,
+                      DILineInfoSpecifier::FileLineInfoKind::AbsoluteFilePath,
+                      Result));
+  EXPECT_THAT(Result.c_str(), MatchesRegex("a dir.b dir.b file"));
 }
 
 } // end anonymous namespace
