@@ -327,7 +327,7 @@ func @std_if_missing_else(%arg0: i1, %arg1: f32)
 func @std_for_operands_mismatch(%arg0 : index, %arg1 : index, %arg2 : index) {
   %s0 = constant 0.0 : f32
   %t0 = constant 1 : i32
-  // expected-error@+1 {{mismatch in number of op loop-carried values and defined values}}
+  // expected-error@+1 {{mismatch in number of loop-carried values and defined values}}
   %result1:3 = loop.for %i0 = %arg0 to %arg1 step %arg2 iter_args(%si = %s0, %ti = %t0) -> (f32, i32, f32) {
     %sn = addf %si, %si : f32
     %tn = addi %ti, %ti : i32
@@ -342,7 +342,7 @@ func @std_for_operands_mismatch_2(%arg0 : index, %arg1 : index, %arg2 : index) {
   %s0 = constant 0.0 : f32
   %t0 = constant 1 : i32
   %u0 = constant 1.0 : f32
-  // expected-error@+1 {{mismatch in number of op loop-carried values and defined values}}
+  // expected-error@+1 {{mismatch in number of loop-carried values and defined values}}
   %result1:2 = loop.for %i0 = %arg0 to %arg1 step %arg2 iter_args(%si = %s0, %ti = %t0, %ui = %u0) -> (f32, i32) {
     %sn = addf %si, %si : f32
     %tn = addi %ti, %ti : i32

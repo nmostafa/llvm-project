@@ -137,7 +137,7 @@ def ForOp : Loop_Op<"for",
       return getBody()->getArguments().drop_front();
     }
     iterator_range<Operation::operand_iterator> getIterOperands() {
-      return getOperands().drop_front(getNumCtrlOperands());
+      return getOperands().drop_front(getNumControlOperands());
     }
 
     void setLowerBound(Value bound) { getOperation()->setOperand(0, bound); }
@@ -149,14 +149,14 @@ def ForOp : Loop_Op<"for",
       return getBody()->getNumArguments() - 1; 
     }
     /// Number of operands controlling the loop: lb, ub, step
-    constexpr unsigned getNumCtrlOperands() { return 3; }
+    constexpr unsigned getNumControlOperands() { return 3; }
     /// Does the operation hold operands for loop-carried values
     bool hasIterOperands() { 
-      return getOperation()->getNumOperands() > getNumCtrlOperands();
+      return getOperation()->getNumOperands() > getNumControlOperands();
     }
     /// Get Number of loop-carried values
     unsigned getNumIterOperands() {
-      return getOperation()->getNumOperands() - getNumCtrlOperands();
+      return getOperation()->getNumOperands() - getNumControlOperands();
     }
   }];
 }
@@ -352,16 +352,17 @@ def ReduceReturnOp :
 }
 
 def YieldOp : Loop_Op<"yield", [Terminator]> {
-  let summary = "cf yield and termination operation";
+  let summary = "loop yield and termination operation";
   let description = [{
     "loop.yield" yields an SSA value from a loop dialect op region and
     terminates the regions. The semantics of how the values are yielded
     is defined by the parent operation. 
     If "loop.yield" has any operands, the operands must match the parent
     operation's results. 
-    If the parent op defines no values, then the "loop.yield" can be 
-    left out and will be inserted implicitly. Otherwise, it has 
-    to be explicitly present. 
+    If the parent operation defines no values, then the "loop.yield" may be 
+    left out in the custom syntax and the builders will insert one implicitly.
+    Otherwise, it has to be present in the syntax to indicate which values
+    are yielded. 
   }];
 
   let arguments = (ins Variadic<AnyType>:$results);

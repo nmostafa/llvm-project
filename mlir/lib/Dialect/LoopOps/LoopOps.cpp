@@ -89,20 +89,23 @@ static LogicalResult verify(ForOp op) {
   // basic block arguments.
   if (op.getNumIterOperands() != opNumResults)
     return op.emitOpError(
-        "mismatch in number of op loop-carried values and defined values");
+        "mismatch in number of loop-carried values and defined values");
   if (op.getNumRegionIterArgs() != opNumResults)
     return op.emitOpError(
         "mismatch in number of basic block args and defined values");
   auto iterOperands = op.getIterOperands();
   auto iterArgs = op.getRegionIterArgs();
   auto opResults = op.getResults();
+  unsigned i = 0;
   for (auto e : llvm::zip(iterOperands, iterArgs, opResults)) {
     if (std::get<0>(e).getType() != std::get<2>(e).getType())
-      return op.emitOpError()
-             << "types mismatch between iter operands and defined values";
+      return op.emitOpError() << "types mismatch between " << i
+                              << "th iter operand and defined value";
     if (std::get<1>(e).getType() != std::get<2>(e).getType())
-      return op.emitOpError()
-             << "types mismatch between iter region args and defined values";
+      return op.emitOpError() << "types mismatch between " << i
+                              << "th iter region arg and defined value";
+
+    i++;
   }
   return success();
 }
@@ -121,8 +124,7 @@ static void print(OpAsmPrinter &p, ForOp op) {
       p << std::get<0>(e) << " = " << std::get<1>(e);
       p << ((++i == numIterOperands) ? ")" : ", ");
     }
-  }
-  if (!op.results().empty()) {
+    assert(!op.results().empty());
     p << " -> (" << op.getResultTypes() << ")";
     printBlockTerminators = true;
   }
@@ -174,7 +176,7 @@ static ParseResult parseForOp(OpAsmParser &parser, OperationState &result) {
   if (regionArgs.size() != argTypes.size())
     return parser.emitError(
         parser.getNameLoc(),
-        "mismatch in number of op loop-carried values and defined values");
+        "mismatch in number of loop-carried values and defined values");
 
   if (parser.parseRegion(*body, regionArgs, argTypes))
     return failure();
