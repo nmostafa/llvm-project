@@ -140,7 +140,7 @@ func @std_if_yield(%arg0: i1, %arg1: f32)
 
 func @std_for_yield(%arg0 : index, %arg1 : index, %arg2 : index) {
   %s0 = constant 0.0 : f32
-  %result = loop.for %i0 = %arg0 to %arg1 step %arg2 iter_args(%si = %s0 : f32) -> (f32) {
+  %result = loop.for %i0 = %arg0 to %arg1 step %arg2 iter_args(%si = %s0) -> (f32) {
     %sn = addf %si, %si : f32
     loop.yield %sn : f32
   }
@@ -152,7 +152,7 @@ func @std_for_yield(%arg0 : index, %arg1 : index, %arg2 : index) {
 // CHECK-SAME: %[[ARG2:[A-Za-z0-9]+]]:
 // CHECK-NEXT: %[[INIT:.*]] = constant
 // CHECK-NEXT: %{{.*}} = loop.for %{{.*}} = %[[ARG0]] to %[[ARG1]] step %[[ARG2]]
-// CHECK-SAME: iter_args(%[[ITER:.*]] = %[[INIT]] : f32) -> (f32) {
+// CHECK-SAME: iter_args(%[[ITER:.*]] = %[[INIT]]) -> (f32) {
 // CHECK-NEXT: %[[NEXT:.*]] = addf %[[ITER]], %[[ITER]] : f32
 // CHECK-NEXT: loop.yield %[[NEXT]] : f32
 // CHECK-NEXT: }
@@ -162,7 +162,7 @@ func @std_for_yield_multi(%arg0 : index, %arg1 : index, %arg2 : index) {
   %s0 = constant 0.0 : f32
   %t0 = constant 1 : i32
   %u0 = constant 1.0 : f32
-  %result1:3 = loop.for %i0 = %arg0 to %arg1 step %arg2 iter_args(%si = %s0 : f32, %ti = %t0 : i32, %ui = %u0 : f32) -> (f32, i32, f32) {
+  %result1:3 = loop.for %i0 = %arg0 to %arg1 step %arg2 iter_args(%si = %s0, %ti = %t0, %ui = %u0) -> (f32, i32, f32) {
     %sn = addf %si, %si : f32
     %tn = addi %ti, %ti : i32
     %un = subf %ui, %ui : f32
@@ -178,7 +178,7 @@ func @std_for_yield_multi(%arg0 : index, %arg1 : index, %arg2 : index) {
 // CHECK-NEXT: %[[INIT2:.*]] = constant
 // CHECK-NEXT: %[[INIT3:.*]] = constant
 // CHECK-NEXT: %{{.*}}:3 = loop.for %{{.*}} = %[[ARG0]] to %[[ARG1]] step %[[ARG2]]
-// CHECK-SAME: iter_args(%[[ITER1:.*]] = %[[INIT1]] : f32, %[[ITER2:.*]] = %[[INIT2]] : i32, %[[ITER3:.*]] = %[[INIT3]] : f32) -> (f32, i32, f32) {
+// CHECK-SAME: iter_args(%[[ITER1:.*]] = %[[INIT1]], %[[ITER2:.*]] = %[[INIT2]], %[[ITER3:.*]] = %[[INIT3]]) -> (f32, i32, f32) {
 // CHECK-NEXT: %[[NEXT1:.*]] = addf %[[ITER1]], %[[ITER1]] : f32
 // CHECK-NEXT: %[[NEXT2:.*]] = addi %[[ITER2]], %[[ITER2]] : i32
 // CHECK-NEXT: %[[NEXT3:.*]] = subf %[[ITER3]], %[[ITER3]] : f32
@@ -188,7 +188,7 @@ func @std_for_yield_multi(%arg0 : index, %arg1 : index, %arg2 : index) {
 func @conditional_reduce(%buffer: memref<1024xf32>, %lb: index, %ub: index, %step: index) -> (f32) {
   %sum_0 = constant 0.0 : f32
   %c0 = constant 0.0 : f32
-  %sum = loop.for %iv = %lb to %ub step %step iter_args(%sum_iter = %sum_0 : f32) -> (f32) {
+  %sum = loop.for %iv = %lb to %ub step %step iter_args(%sum_iter = %sum_0) -> (f32) {
 	  %t = load %buffer[%iv] : memref<1024xf32>
 	  %cond = cmpf "ugt", %t, %c0 : f32
 	  %sum_next = loop.if %cond -> (f32) {
@@ -209,7 +209,7 @@ func @conditional_reduce(%buffer: memref<1024xf32>, %lb: index, %ub: index, %ste
 //  CHECK-NEXT: %[[INIT:.*]] = constant
 //  CHECK-NEXT: %[[ZERO:.*]] = constant
 //  CHECK-NEXT: %[[RESULT:.*]] = loop.for %[[IV:.*]] = %[[ARG1]] to %[[ARG2]] step %[[ARG3]]
-//  CHECK-SAME: iter_args(%[[ITER:.*]] = %[[INIT]] : f32) -> (f32) {
+//  CHECK-SAME: iter_args(%[[ITER:.*]] = %[[INIT]]) -> (f32) {
 //  CHECK-NEXT: %[[T:.*]] = load %[[ARG0]][%[[IV]]]
 //  CHECK-NEXT: %[[COND:.*]] = cmpf "ugt", %[[T]], %[[ZERO]]
 //  CHECK-NEXT: %[[IFRES:.*]] = loop.if %[[COND]] -> (f32) {

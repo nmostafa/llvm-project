@@ -118,9 +118,7 @@ static void print(OpAsmPrinter &p, ForOp op) {
     auto regionArgs = op.getRegionIterArgs();
     auto operands = op.getIterOperands();
     for (auto e : llvm::zip(regionArgs, operands)) {
-      auto operand = std::get<1>(e);
-      p << std::get<0>(e) << " = " << std::get<1>(e) << " : ";
-      p << operand.getType();
+      p << std::get<0>(e) << " = " << std::get<1>(e);
       p << ((++i == numIterOperands) ? ")" : ", ");
     }
   }
@@ -157,19 +155,27 @@ static ParseResult parseForOp(OpAsmParser &parser, OperationState &result) {
   regionArgs.push_back(inductionVariable);
 
   if (succeeded(parser.parseOptionalKeyword("iter_args"))) {
-    parser.parseAssignmentList(regionArgs, operands, argTypes);
+    // Parse assignment list and results type list.
+    if (parser.parseAssignmentList(regionArgs, operands) ||
+        parser.parseArrowTypeList(result.types))
+      return failure();
     // Resolve input operands.
-    for (auto operand_type : llvm::zip(operands, argTypes))
-      parser.resolveOperand(std::get<0>(operand_type),
-                            std::get<1>(operand_type), result.operands);
+    for (auto operand_type : llvm::zip(operands, result.types))
+      if (parser.resolveOperand(std::get<0>(operand_type),
+                                std::get<1>(operand_type), result.operands))
+        return failure();
   }
-  argTypes.insert(argTypes.begin(), indexType);
-
-  // Parse optional results type list.
-  if (parser.parseOptionalArrowTypeList(result.types))
-    return failure();
+  // Induction variable.
+  argTypes.push_back(indexType);
+  // Loop carried variables
+  argTypes.append(result.types.begin(), result.types.end());
   // Parse the body region.
   Region *body = result.addRegion();
+  if (regionArgs.size() != argTypes.size())
+    return parser.emitError(
+        parser.getNameLoc(),
+        "mismatch in number of op loop-carried values and defined values");
+
   if (parser.parseRegion(*body, regionArgs, argTypes))
     return failure();
 

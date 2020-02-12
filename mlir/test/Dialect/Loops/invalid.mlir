@@ -328,7 +328,7 @@ func @std_for_operands_mismatch(%arg0 : index, %arg1 : index, %arg2 : index) {
   %s0 = constant 0.0 : f32
   %t0 = constant 1 : i32
   // expected-error@+1 {{mismatch in number of op loop-carried values and defined values}}
-  %result1:3 = loop.for %i0 = %arg0 to %arg1 step %arg2 iter_args(%si = %s0 : f32, %ti = %t0 : i32) -> (f32, i32, f32) {
+  %result1:3 = loop.for %i0 = %arg0 to %arg1 step %arg2 iter_args(%si = %s0, %ti = %t0) -> (f32, i32, f32) {
     %sn = addf %si, %si : f32
     %tn = addi %ti, %ti : i32
     loop.yield %sn, %tn, %sn : f32, i32, f32
@@ -343,7 +343,7 @@ func @std_for_operands_mismatch_2(%arg0 : index, %arg1 : index, %arg2 : index) {
   %t0 = constant 1 : i32
   %u0 = constant 1.0 : f32
   // expected-error@+1 {{mismatch in number of op loop-carried values and defined values}}
-  %result1:2 = loop.for %i0 = %arg0 to %arg1 step %arg2 iter_args(%si = %s0 : f32, %ti = %t0 : i32, %ui = %u0 : f32) -> (f32, i32) {
+  %result1:2 = loop.for %i0 = %arg0 to %arg1 step %arg2 iter_args(%si = %s0, %ti = %t0, %ui = %u0) -> (f32, i32) {
     %sn = addf %si, %si : f32
     %tn = addi %ti, %ti : i32
     %un = subf %ui, %ui : f32
@@ -355,13 +355,14 @@ func @std_for_operands_mismatch_2(%arg0 : index, %arg1 : index, %arg2 : index) {
 // -----
 
 func @std_for_operands_mismatch_3(%arg0 : index, %arg1 : index, %arg2 : index) {
+  // expected-note@+1 {{prior use here}}
   %s0 = constant 0.0 : f32
   %t0 = constant 1.0 : f32
-  // expected-error@+1 {{types mismatch between iter operands and defined values}}
-  %result1:2 = loop.for %i0 = %arg0 to %arg1 step %arg2 iter_args(%si = %s0 : f32, %ti = %t0 : f32) -> (i32, i32) {
-    %sn = addf %si, %si : f32
-    %tn = addf %ti, %ti : f32
-    loop.yield %sn, %tn : f32, f32
+  // expected-error@+1 {{expects different type than prior uses: 'i32' vs 'f32'}}
+  %result1:2 = loop.for %i0 = %arg0 to %arg1 step %arg2 iter_args(%si = %s0, %ti = %t0) -> (i32, i32) {
+    %sn = addf %si, %si : i32
+    %tn = addf %ti, %ti : i32
+    loop.yield %sn, %tn : i32, i32
   }
   return
 }

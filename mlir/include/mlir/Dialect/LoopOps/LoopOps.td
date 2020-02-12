@@ -78,7 +78,7 @@ def ForOp : Loop_Op<"for",
       // Initial sum set to 0.
       %sum_0 = constant 0.0 : f32
       // iter_args binds initial values to the loop's region arguments.
-      %sum = loop.for %iv = %lb to %ub step %step iter_args(%sum_iter = %sum_0 : f32) -> (f32) {
+      %sum = loop.for %iv = %lb to %ub step %step iter_args(%sum_iter = %sum_0) -> (f32) {
 	      %t = load %buffer[%iv] : memref<1024xf32>
         %sum_next = addf %sum_iter, %t : f32
         // Yield current iteration sum to next iteration %sum_iter or to %sum if final iteration.
@@ -99,7 +99,7 @@ def ForOp : Loop_Op<"for",
     func @conditional_reduce(%buffer: memref<1024xf32>, %lb: index, %ub: index, %step: index) -> (f32) {
       %sum_0 = constant 0.0 : f32
       %c0 = constant 0.0 : f32
-      %sum = loop.for %iv = %lb to %ub step %step iter_args(%sum_iter = %sum_0 : f32) -> (f32) {
+      %sum = loop.for %iv = %lb to %ub step %step iter_args(%sum_iter = %sum_0) -> (f32) {
     	  %t = load %buffer[%iv] : memref<1024xf32>
     	  %cond = cmpf "ugt", %t, %c0 : f32
     	  %sum_next = loop.if %cond -> (f32) {

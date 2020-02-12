@@ -606,6 +606,9 @@ public:
     return success();
   }
 
+  /// Parse an arrow followed by a type list.
+  virtual ParseResult parseArrowTypeList(SmallVectorImpl<Type> &result) = 0;
+
   /// Parse an optional arrow followed by a type list.
   virtual ParseResult
   parseOptionalArrowTypeList(SmallVectorImpl<Type> &result) = 0;
@@ -640,9 +643,10 @@ public:
 
   /// Parse a list of assignments of the form
   /// (%x1 = %y1 : type1, %x2 = %y2 : type2, ...).
-  virtual ParseResult parseAssignmentList(SmallVectorImpl<OperandType> &lhs,
-                                          SmallVectorImpl<OperandType> &rhs,
-                                          SmallVectorImpl<Type> &types) = 0;
+  /// The list must contain at least one entry
+  virtual ParseResult
+  parseAssignmentList(SmallVectorImpl<OperandType> &lhs,
+                      SmallVectorImpl<OperandType> &rhs) = 0;
 
   /// Parse a keyword followed by a type.
   ParseResult parseKeywordType(const char *keyword, Type &result) {
