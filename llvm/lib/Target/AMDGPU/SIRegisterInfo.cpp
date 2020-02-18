@@ -41,53 +41,8 @@ static cl::opt<bool> EnableSpillSGPRToVGPR(
 SIRegisterInfo::SIRegisterInfo(const GCNSubtarget &ST) :
   AMDGPUGenRegisterInfo(0),
   ST(ST),
-  SGPRPressureSets(getNumRegPressureSets()),
-  VGPRPressureSets(getNumRegPressureSets()),
-  AGPRPressureSets(getNumRegPressureSets()),
   SpillSGPRToVGPR(EnableSpillSGPRToVGPR),
   isWave32(ST.isWave32()) {
-  unsigned NumRegPressureSets = getNumRegPressureSets();
-
-  SGPRSetID = NumRegPressureSets;
-  VGPRSetID = NumRegPressureSets;
-  AGPRSetID = NumRegPressureSets;
-
-  for (unsigned i = 0; i < NumRegPressureSets; ++i) {
-    classifyPressureSet(i, AMDGPU::SGPR0, SGPRPressureSets);
-    classifyPressureSet(i, AMDGPU::VGPR0, VGPRPressureSets);
-    classifyPressureSet(i, AMDGPU::AGPR0, AGPRPressureSets);
-  }
-
-  // Determine the number of reg units for each pressure set.
-  std::vector<unsigned> PressureSetRegUnits(NumRegPressureSets, 0);
-  for (unsigned i = 0, e = getNumRegUnits(); i != e; ++i) {
-    const int *PSets = getRegUnitPressureSets(i);
-    for (unsigned j = 0; PSets[j] != -1; ++j) {
-      ++PressureSetRegUnits[PSets[j]];
-    }
-  }
-
-  unsigned VGPRMax = 0, SGPRMax = 0, AGPRMax = 0;
-  for (unsigned i = 0; i < NumRegPressureSets; ++i) {
-    if (isVGPRPressureSet(i) && PressureSetRegUnits[i] > VGPRMax) {
-      VGPRSetID = i;
-      VGPRMax = PressureSetRegUnits[i];
-      continue;
-    }
-    if (isSGPRPressureSet(i) && PressureSetRegUnits[i] > SGPRMax) {
-      SGPRSetID = i;
-      SGPRMax = PressureSetRegUnits[i];
-    }
-    if (isAGPRPressureSet(i) && PressureSetRegUnits[i] > AGPRMax) {
-      AGPRSetID = i;
-      AGPRMax = PressureSetRegUnits[i];
-      continue;
-    }
-  }
-
-  assert(SGPRSetID < NumRegPressureSets &&
-         VGPRSetID < NumRegPressureSets &&
-         AGPRSetID < NumRegPressureSets);
 }
 
 void SIRegisterInfo::reserveRegisterTuples(BitVector &Reserved,
@@ -146,25 +101,6 @@ const uint32_t *SIRegisterInfo::getAllVGPRRegMask() const {
 
 const uint32_t *SIRegisterInfo::getAllAllocatableSRegMask() const {
   return CSR_AMDGPU_AllAllocatableSRegs_RegMask;
-}
-
-static bool hasPressureSet(const int *PSets, unsigned PSetID) {
-  for (unsigned i = 0; PSets[i] != -1; ++i) {
-    if (PSets[i] == (int)PSetID)
-      return true;
-  }
-  return false;
-}
-
-void SIRegisterInfo::classifyPressureSet(unsigned PSetID, unsigned Reg,
-                                         BitVector &PressureSets) const {
-  for (MCRegUnitIterator U(Reg, this); U.isValid(); ++U) {
-    const int *PSets = getRegUnitPressureSets(*U);
-    if (hasPressureSet(PSets, PSetID)) {
-      PressureSets.set(PSetID);
-      break;
-    }
-  }
 }
 
 // FIXME: TableGen should generate something to make this manageable for all
@@ -1772,27 +1708,42 @@ ArrayRef<int16_t> SIRegisterInfo::getRegSplitParts(const TargetRegisterClass *RC
     }
   }
 
-  assert(EltSize == 32 && "unhandled elt size");
+  if (EltSize == 32) {
+    static const int16_t Sub0_31_256[] = {
+      AMDGPU::sub0_sub1_sub2_sub3_sub4_sub5_sub6_sub7,
+      AMDGPU::sub8_sub9_sub10_sub11_sub12_sub13_sub14_sub15,
+      AMDGPU::sub16_sub17_sub18_sub19_sub20_sub21_sub22_sub23,
+      AMDGPU::sub24_sub25_sub26_sub27_sub28_sub29_sub30_sub31
+    };
 
-  static const int16_t Sub0_31_256[] = {
-    AMDGPU::sub0_sub1_sub2_sub3_sub4_sub5_sub6_sub7,
-    AMDGPU::sub8_sub9_sub10_sub11_sub12_sub13_sub14_sub15,
-    AMDGPU::sub16_sub17_sub18_sub19_sub20_sub21_sub22_sub23,
-    AMDGPU::sub24_sub25_sub26_sub27_sub28_sub29_sub30_sub31
-  };
+    static const int16_t Sub0_15_256[] = {
+      AMDGPU::sub0_sub1_sub2_sub3_sub4_sub5_sub6_sub7,
+      AMDGPU::sub8_sub9_sub10_sub11_sub12_sub13_sub14_sub15
+    };
 
-  static const int16_t Sub0_15_256[] = {
-    AMDGPU::sub0_sub1_sub2_sub3_sub4_sub5_sub6_sub7,
-    AMDGPU::sub8_sub9_sub10_sub11_sub12_sub13_sub14_sub15
+    switch (AMDGPU::getRegBitWidth(*RC->MC)) {
+    case 256:
+      return {};
+    case 512:
+      return makeArrayRef(Sub0_15_256);
+    case 1024:
+      return makeArrayRef(Sub0_31_256);
+    default:
+      llvm_unreachable("unhandled register size");
+    }
+  }
+
+  assert(EltSize == 64 && "unhandled elt size");
+  static const int16_t Sub0_31_512[] = {
+    AMDGPU::sub0_sub1_sub2_sub3_sub4_sub5_sub6_sub7_sub8_sub9_sub10_sub11_sub12_sub13_sub14_sub15,
+    AMDGPU::sub16_sub17_sub18_sub19_sub20_sub21_sub22_sub23_sub24_sub25_sub26_sub27_sub28_sub29_sub30_sub31
   };
 
   switch (AMDGPU::getRegBitWidth(*RC->MC)) {
-  case 256:
-    return {};
   case 512:
-    return makeArrayRef(Sub0_15_256);
+    return {};
   case 1024:
-    return makeArrayRef(Sub0_31_256);
+    return makeArrayRef(Sub0_31_512);
   default:
     llvm_unreachable("unhandled register size");
   }
@@ -1860,11 +1811,12 @@ unsigned SIRegisterInfo::getRegPressureLimit(const TargetRegisterClass *RC,
 
 unsigned SIRegisterInfo::getRegPressureSetLimit(const MachineFunction &MF,
                                                 unsigned Idx) const {
-  if (Idx == getVGPRPressureSet() || Idx == getAGPRPressureSet())
+  if (Idx == AMDGPU::RegisterPressureSets::VGPR_32 ||
+      Idx == AMDGPU::RegisterPressureSets::AGPR_32)
     return getRegPressureLimit(&AMDGPU::VGPR_32RegClass,
                                const_cast<MachineFunction &>(MF));
 
-  if (Idx == getSGPRPressureSet())
+  if (Idx == AMDGPU::RegisterPressureSets::SReg_32)
     return getRegPressureLimit(&AMDGPU::SGPR_32RegClass,
                                const_cast<MachineFunction &>(MF));
 
