@@ -516,9 +516,10 @@ static LogicalResult verify(YieldOp op) {
     if (op.getNumOperands() != 0)
       return op.emitOpError()
              << "yield inside loop.parallel is not allowed to have operands";
-  } else
+  } else {
     return op.emitOpError()
            << "yield only terminates If, For or Parallel regions";
+  }
 
   return success();
 }
