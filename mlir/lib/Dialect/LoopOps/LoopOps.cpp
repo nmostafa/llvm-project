@@ -116,15 +116,14 @@ static void print(OpAsmPrinter &p, ForOp op) {
     << op.lowerBound() << " to " << op.upperBound() << " step " << op.step();
 
   if (op.hasIterOperands()) {
-    unsigned numIterOperands = op.getNumIterOperands(), i = 0;
     p << " iter_args(";
     auto regionArgs = op.getRegionIterArgs();
     auto operands = op.getIterOperands();
-    for (auto e : llvm::zip(regionArgs, operands)) {
-      p << std::get<0>(e) << " = " << std::get<1>(e);
-      p << ((++i == numIterOperands) ? ")" : ", ");
-    }
-    assert(!op.results().empty());
+
+    mlir::interleaveComma(llvm::zip(regionArgs, operands), p, [&](auto it) {
+      p << std::get<0>(it) << " = " << std::get<1>(it);
+    });
+    p << ")";
     p << " -> (" << op.getResultTypes() << ")";
     printBlockTerminators = true;
   }
